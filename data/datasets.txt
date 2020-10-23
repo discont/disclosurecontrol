@@ -1,0 +1,5 @@
+The Census dataset can be found at:
+http://www.ipums.org
+
+The COIL2000 benchmark dataset can be found at:
+https://kdd.ics.uci.edu/databases/tic/tic.html
