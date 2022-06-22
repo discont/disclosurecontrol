@@ -3,8 +3,9 @@ import java.util.*;
 import java.io.FileWriter;
 import java.util.Random;
 
+
 /*includes the reading of tuples and their assignment into buckets*/
-public class SortGreedy_BLikeness {
+public class SortGreedyPref_BLikeness {
 
 	private static final double BIG = Double.MAX_VALUE;
 	private static final boolean RANGE = false;
@@ -12,7 +13,6 @@ public class SortGreedy_BLikeness {
 	//private static final boolean OPTIMIZATION = true;
 	private static double maxCost = BIG;//0.5436267458828434;
 	static byte[] cardinalities = {79, 2, 17, 6, 9, 10, 83, 51}; //age, gender, edu_level, marital, race, work_class, country, occupation
-	//static byte[] cardinalities ={10,6,6,10,41};//Coil2000
 	static int age = 0;
 	static int gender = 1;
 	static int edu_level = 2;
@@ -21,22 +21,20 @@ public class SortGreedy_BLikeness {
 	static int work_class = 5;
 	static int country = 6;
 	static int occupation = 7;
+	static boolean q;
 	//static byte[] cardinalities ={15,2};
 	//***b*like***//
 	//static int k;// = 10;
-	static double b_param;// = 10;
+	static int b_param;// = 10;
 	static int SA;// 0 - 7.
 	//***b*like***//
-	static int dims = 8; //5; //3
+	static int dims = 8; //3
 	static int tuples;// = 10000;
 	static int origTuples;// = tuples;
 	static int bucket_size;//c;
 	static int buckNum;//tuples/c
 	static int partition_size;//size of bucket partitions.
 	static int partition_function;//type of bucket partitioning.
-	static boolean rq;
-	static boolean pq;
-	static boolean nb;
 	static int parts;//number of partitions per bucket.
 	//static int offset=0;
 	static byte[] dimension = new byte[dims];
@@ -52,14 +50,13 @@ public class SortGreedy_BLikeness {
 	static HeapNode[] edges;
 	static int edge_size;
 	static double threshold;
-	static Map<Integer, Set<Short>> uniqueValsPerAttr;
 
 	//*******************************************//
 	//METHODS THAT PERFORM ARRAY-PROCESSING TASKS//
 	//*******************************************//
-
+		
 	private static int[] greedyAssign(double[][] array, int[] assignment, int chunk_size) {
-
+		
 		int[] jToi = new int[chunk_size];
 		Arrays.fill(assignment, -1);
 		Arrays.fill(jToi, -1);
@@ -92,7 +89,7 @@ public class SortGreedy_BLikeness {
 							}
 							/*for (int step2 = 1; step2<chunk_size/2; step2++){
 							 int l = (chunk_size+possible_j-step2)%chunk_size;
-
+							 
 							 if (jToi[l]==-1 && array[possible_i][l]!=BIG){
 							 assignment[index]=possible_j;
 							 assignment[possible_i]=l;
@@ -101,7 +98,7 @@ public class SortGreedy_BLikeness {
 							 swap_done = true;
 							 break;
 							 }
-
+							 
 							 l=(possible_j+step2)%chunk_size;
 							 if (jToi[l]==-1 && array[possible_i][l]!=BIG){
 							 assignment[index]=possible_j;
@@ -133,7 +130,7 @@ public class SortGreedy_BLikeness {
 								}
 								/*for (int step2 = 1; step2<chunk_size/2; step2++){
 								 int l = (chunk_size+possible_j-step2)%chunk_size;
-
+								 
 								 if (jToi[l]==-1 && array[possible_i][l]!=BIG){
 								 assignment[index]=possible_j;
 								 assignment[possible_i]=l;
@@ -142,7 +139,7 @@ public class SortGreedy_BLikeness {
 								 swap_done = true;
 								 break;
 								 }
-
+								 
 								 l=(possible_j+step2)%chunk_size;
 								 if (jToi[l]==-1 && array[possible_i][l]!=BIG){
 								 assignment[index]=possible_j;
@@ -161,10 +158,10 @@ public class SortGreedy_BLikeness {
 				}
 			}
 		}
-
+		
 		return assignment;
 	}
-
+	
 	//*******************************************//
 	//	METHODS to pre-process the data			//
 	//*******************************************//
@@ -193,7 +190,7 @@ public class SortGreedy_BLikeness {
 	// return true if data x > data y
 	public static boolean compare_data(short[] x, short[] y) {
 		for (int i = 0;i < dims;i++) {
-			if (i != dims-1){ //compare w.r.t. all except SA!!!
+			if (i != SA){ //compare w.r.t. all except SA!!!
 				if (x[dimension[i]] > y[dimension[i]]) {
 					/*if (map[x][dimension[0]]<map[y][dimension[0]])
 					 System.out.println("oops");*/
@@ -225,7 +222,7 @@ public class SortGreedy_BLikeness {
 				temp2=edges[i];
 				edges[i]=edges[j];
 				edges[j]=temp2;
-
+				
 				i++;
 				j--;
 			}
@@ -236,9 +233,9 @@ public class SortGreedy_BLikeness {
 		if (i < right) {
 			qSort(i, right);
 		}
-
+		
 	}
-
+	
 	public static boolean compare(Object o1, Object o2) {
 		if (((HeapNode) o1).getCost()>((HeapNode)o2).getCost())
 			return true;
@@ -260,7 +257,7 @@ public class SortGreedy_BLikeness {
 				temp2=a[i];
 				a[i]=a[j];
 				a[j]=temp2;
-
+				
 				i++;
 				j--;
 			}
@@ -272,6 +269,34 @@ public class SortGreedy_BLikeness {
 			quickSortArray(i, right, a);
 		}
 	}
+	
+	public static void quickSortArray(int left, int right, int[] a) {
+		int i = left, j = right;
+		int ref = left + (right-left)/2; //i.e., (right+left)/2
+		int pivot = a[ref];
+		int temp2;
+		while (i <= j) {
+			while (pivot > a[i])
+				i++;
+			while (a[j] > pivot)
+				j--;
+			if (i <= j) {
+				temp2=a[i];
+				a[i]=a[j];
+				a[j]=temp2;
+				
+				i++;
+				j--;
+			}
+		};
+		// recursion
+		if (left < j)
+			quickSortArray(left, j, a);
+		if (i < right) {
+			quickSortArray(i, right, a);
+		}
+	}
+	
 	// sort data by lexicographical order
 	public static void quickSortBucket(int left, int right, int b) {
 		int i = left, j = right;
@@ -311,7 +336,7 @@ public class SortGreedy_BLikeness {
 		int chunk_size; int partSA;
 		short[][] tmpBucket;
 		int[] loaded;
-
+		
 		if(parts == 0){
 			parts = 1;
 			chunk_sizes.add(b_size);
@@ -328,7 +353,7 @@ public class SortGreedy_BLikeness {
 			}
 		}
 		loaded = new int[parts];
-
+		
 		for(int b=0; b<buckNum; b++){//for every bucket
 			tmpBucket = new short[bucket_size][dims];
 			ArrayList<Integer> chg = bk.changeSA.get(b);
@@ -364,7 +389,7 @@ public class SortGreedy_BLikeness {
 			buckets[b] = tmpBucket;
 		}
 	}
-
+	
 	/*
 	 * Option 1: bucket_partition2.
 	 * Partitions each bucket, maintaining the distribution of the most freq SA
@@ -377,7 +402,7 @@ public class SortGreedy_BLikeness {
 		float ratio; int offsetB; int offsetB2; int offsetP;
 		int chunk_size; int partSA; int partSA2;
 		short[][] tmpBucket;
-
+		
 		if(parts == 0){
 			parts = 1;
 			chunk_sizes.add(b_size);
@@ -393,7 +418,7 @@ public class SortGreedy_BLikeness {
 				chunk_sizes.addLast(b_size % partition_size);
 			}
 		}
-
+		
 		for(int b=0; b<buckNum; b++){//for every bucket
 			tmpBucket = new short[bucket_size][dims];
 			//tuples of most freq SA:
@@ -433,10 +458,6 @@ public class SortGreedy_BLikeness {
 		}
 	}
 
-	/*
-	 * rangeQueries: Range queries of the form
-	 * (QI_1 ∈(min_1, max_1), ..., QI_N ∈(min_N, max_N), SA ∈(min_S, max_S)) 
-	*/
 	static double rangeQueries(double s, int lambda, double[][] rs, int times, double[] errArray){
 		double error = 0.0;
 		double absError=0.0;
@@ -445,16 +466,16 @@ public class SortGreedy_BLikeness {
 		int[] distVals = new int[buckNum];
 		ArrayList<Integer> attrOptions = new ArrayList<Integer>();
 		ArrayList<Integer> choices = new ArrayList<Integer>();
-		//static final int[] attrNumber = new int[]{0, 1, 2, 3, 4, 5, 6};
-		
+		//static final int[] attrNumber = new int[]{0, 1, 2, 3, 4, 5 , 6};
+
 		sele = Math.pow(s, 1.0/((double)lambda+1.0));
-
+		
 		System.out.println("lambda ="+lambda+": ");
-
+		
 		for (int tm=0; tm<times; tm++){
 			for (int qi=0; qi<dims-1; qi++){ //INITIALIZATION:
-				rs[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min SA value.
-				rs[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max SA value
+				rs[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min QI value.
+				rs[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max QI value
 			}
 			//SA:
 			range = (double)(MinMaxPerAttribute[SA][1] - MinMaxPerAttribute[SA][0]) * sele;
@@ -467,7 +488,7 @@ public class SortGreedy_BLikeness {
 			attrOptions.clear();
 			choices.clear();
 			for (int i=0; i<7; i++){ attrOptions.add(i); } //originally
-
+			
 			int temporary = 7;
 			for (int ch=0; ch<lambda; ch++){
 				int next = new Random().nextInt(temporary);
@@ -477,20 +498,20 @@ public class SortGreedy_BLikeness {
 				temporary--;
 			}
 			/*
-			System.out.print("Keeping:= ");
-			for (int i=0; i<choices.size(); i++){
-				System.out.print(choices.get(i)+" ");
-			}
-			System.out.print("-- Discarding: ");
-			for (int i=0; i<attrOptions.size(); i++){
-				System.out.print(attrOptions.get(i)+" ");
-			}
-			if (choices.size() != lambda){
-				System.out.println("WTF: "+choices.size()+" "+lambda);
-				System.exit(0);
-			}
-			System.out.println();
-			*/
+			 System.out.print("Keeping:= ");
+			 for (int i=0; i<choices.size(); i++){
+			 System.out.print(choices.get(i)+" ");
+			 }
+			 System.out.print("-- Discarding: ");
+			 for (int i=0; i<attrOptions.size(); i++){
+			 System.out.print(attrOptions.get(i)+" ");
+			 }
+			 if (choices.size() != lambda){
+			 System.out.println("WTF: "+choices.size()+" "+lambda);
+			 System.exit(0);
+			 }
+			 System.out.println();
+			 */
 			for (int ii=0; ii<lambda; ii++){
 				int i = (int)choices.get(ii);
 				if (i==0 || i==2){ //Continuous:
@@ -627,120 +648,83 @@ public class SortGreedy_BLikeness {
 	static double PrefIncQueries(int prefAttr, double[][] rs, int times, double[] errArray){
 		double error = 0.0;
 		double absError=0.0;
-		double[] genMx, genMn;
-		double range, min, max, random, r, overlap;
-		int randomPos;
+		double genMx, genMn;
+		double range, min, max, random, randomPos, r, overlap;
 		int[] distVals = new int[buckNum];
+		ArrayList<Integer> attrOptions = new ArrayList<Integer>();
+		ArrayList<Integer> choices = new ArrayList<Integer>();
 		int[] equalityAttrs = {age, marital, race, gender};
 		int[] allqueryAttrs = {prefAttr, age, marital, race, gender};
-		genMx = new double[final_assignment.length];
-		genMn = new double[final_assignment.length];
 		
+		//sele = Math.pow(s, 1.0/((double)lambda+1.0));
+
+		//System.out.println("lambda ="+lambda+": ");
+
 		if (prefAttr<0 || prefAttr>=dims){
 			System.err.println("Prefix attribute outside of attribute range [0,"+dims+"]");
 			return -1;
 		}
 		
-		Short[] ages = uniqueValsPerAttr.get(age).toArray(new Short[uniqueValsPerAttr.get(age).size()]);
-		Short[] maritals = uniqueValsPerAttr.get(marital).toArray(new Short[uniqueValsPerAttr.get(marital).size()]);
-		Short[] races = uniqueValsPerAttr.get(race).toArray(new Short[uniqueValsPerAttr.get(race).size()]);
-		Short[] genders = uniqueValsPerAttr.get(gender).toArray(new Short[uniqueValsPerAttr.get(gender).size()]);
-		/*
-		System.out.print("ages ");
-		for (int i=0; i<uniqueValsPerAttr.get(age).size(); i++)
-			System.out.print(ages[i]+" ");
-		System.out.print("\nmaritals ");
-		for (int i=0; i<uniqueValsPerAttr.get(marital).size(); i++)
-			System.out.print(maritals[i]+" ");
-		System.out.print("\nraces ");
-		for (int i=0; i<uniqueValsPerAttr.get(race).size(); i++)
-			System.out.print(races[i]+" ");
-		System.out.print("\ngenders ");
-		for (int i=0; i<uniqueValsPerAttr.get(gender).size(); i++)
-			System.out.print(genders[i]+" ");
-		System.out.println(" ");
-		//System.exit(0);
-		*/
-		
-		TreeSet<Integer> uniquesetvals = new TreeSet<Integer>();;
-		Map<Integer, TreeSet<Integer>> UniqueValsPerAssignMap = new HashMap<Integer, TreeSet<Integer>>();
-		for (int j=0; j<final_assignment.length; j++){ //not origTuples!
-			for (int i : allqueryAttrs){
-				if ( i == prefAttr){
-					genMx[j] = indexToTupleMapping(final_assignment[j][0])[i];//init
-					genMn[j] = indexToTupleMapping(final_assignment[j][0])[i];//init
-				}else{
-					uniquesetvals = new TreeSet<Integer>();
-				}
-				for (int bi=0; bi<buckNum; bi++){
-					//Generalization Range:
-					if (final_assignment[j][bi] < origTuples){ //not a dummy:
-						distVals[bi] = indexToTupleMapping(final_assignment[j][bi])[i];
-						if ( i == prefAttr){
-							if (genMx[j] < distVals[bi])
-								genMx[j] = distVals[bi];
-							if ((genMn[j] > distVals[bi]) || (genMn[i]==-1))
-								if (-1 != distVals[bi])
-									genMn[j] = distVals[bi];
-						}else{
-							//get set of uniquesetvals[j][i]
-							uniquesetvals.add(distVals[bi]);
-						}
-					}
-				}
-				if ( i != prefAttr){
-					UniqueValsPerAssignMap.put(((10*j)+i), uniquesetvals);
-				}
-			}
-		}
-		
 		for (int tm=0; tm<times; tm++){
-			//for (int qi=0; qi<dims-1; qi++){ //INITIALIZATION:
-			//	rs[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min QI value.
-			//	rs[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max QI value
-			//}
+			for (int qi=0; qi<dims-1; qi++){ //INITIALIZATION:
+				rs[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min QI value.
+				rs[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max QI value
+			}
 			//PREFIX (0,high):
 			min = (double)MinMaxPerAttribute[prefAttr][0];//min attribute value.
 			max = (double)MinMaxPerAttribute[prefAttr][1];//max attribute value.
-			random = new Random().nextDouble();//random number between 0.0 and 1.0
+			random = new Random().nextDouble();
 			rs[prefAttr][0] = min;
-			rs[prefAttr][1] = min + (random * (max-min));//number between min and max.
+			rs[prefAttr][1] = min + (random * (max-min));
 			
 			//OTHERS: (age = a, marital = m, race = r, gender = g) 
-			/*for (int i: equalityAttrs){
-				min = (double)MinMaxPerAttribute[i][0];//min attribute value.
-				max = (double)MinMaxPerAttribute[i][1];//max attribute value.
-				random = new Random().nextDouble(); //random number from 0.0 to 1.0
-				rs[i][0] = min + (double)Math.round(random * (max-min)); //becomes number from min to max
-				rs[i][1] = rs[i][0]; //equality age=a
-			}*/
-			
-			
-			//age
+			for (int i: equalityAttrs){
+				if (i==age){ // continuous
+					min = (double)MinMaxPerAttribute[i][0];//min attribute value.
+					max = (double)MinMaxPerAttribute[i][1];//max attribute value.
+					random = new Random().nextDouble(); //random number from 0.0 to 1.0
+					rs[i][0] = min + (double)Math.round(random * (max-min)); //becomes number from min to max
+					rs[i][1] = rs[i][0]; //equality age=a
+				}else{ //categorical
+					min = (double)MinMaxPerAttribute[i][0];//min attribute value.
+					random = new Random().nextDouble(); //random number from 0.0 to 1.0
+					randomPos = (double)Math.round(random * ((double)(cardinalities[i])) );
+					rs[i][0] = min + randomPos;
+					rs[i][1] = rs[i][0]; //equality attr=value
+				}
+			}
+			/*
+			i=age; //Continuous
+			min = (double)MinMaxPerAttribute[i][0];//min attribute value.
+			max = (double)MinMaxPerAttribute[i][1];//max attribute value.
 			random = new Random().nextDouble(); //random number from 0.0 to 1.0
-			randomPos = (int)(Math.round(random * ((double)(uniqueValsPerAttr.get(age).size()-1))));
-			rs[age][0] = ages[randomPos]; // -0.5; //becomes number from min to max
-			rs[age][1] = ages[randomPos]; // +0.5; //equality age=a
+			rs[i][0] = min + (double)Math.round(random * (max-min)); //becomes number from min to max
+			rs[i][1] = rs[i][0]; //equality age=a
 
-			//marital 
+			i=marital; //Categorical
+			min = (double)MinMaxPerAttribute[i][0];//min attribute value.
 			random = new Random().nextDouble(); //random number from 0.0 to 1.0
-			randomPos = (int)(Math.round(random * ((double)(uniqueValsPerAttr.get(marital).size()-1))));
-			rs[marital][0] = maritals[randomPos]; // -0.5; //becomes number from min to max
-			rs[marital][1] = maritals[randomPos]; // +0.5; //equality marital=m+-0.5
+			randomPos = (double)Math.round(random * ((double)(cardinalities[i])) );
+			rs[i][0] = min + randomPos;
+			rs[i][1] = rs[i][0]; //equality marital=m
 			
-			//race 
+			i=race; //Categorical
+			min = (double)MinMaxPerAttribute[i][0];//min attribute value.
 			random = new Random().nextDouble(); //random number from 0.0 to 1.0
-			randomPos = (int)(Math.round(random * ((double)(uniqueValsPerAttr.get(race).size()-1))));
-			rs[race][0] = races[randomPos]; // -0.5; //becomes number from min to max
-			rs[race][1] = races[randomPos]; // +0.5; //equality race=r
+			randomPos = (double)Math.round(random * ((double)(cardinalities[i])) );
+			rs[i][0] = min + randomPos;
+			rs[i][1] = rs[i][0]; //equality race=r
 			
-			//gender 
+			i=gender; //Categorical
+			min = (double)MinMaxPerAttribute[i][0];//min attribute value.
 			random = new Random().nextDouble(); //random number from 0.0 to 1.0
-			randomPos = (int)(Math.round(random * ((double)(uniqueValsPerAttr.get(gender).size()-1))));
-			rs[gender][0] = genders[randomPos]; // -0.5; //becomes number from min to max
-			rs[gender][1] = genders[randomPos]; // +0.5; //equality gender=g
+			randomPos = (double)Math.round(random * ((double)(cardinalities[i])) );
+			rs[i][0] = min + randomPos;
+			rs[i][1] = rs[i][0]; //equality gender=g
+			*/
 			
-			/*System.out.println("pref"+prefAttr+" : "+rs[prefAttr][0]+", "+rs[prefAttr][1] 
+			/*
+			System.out.println("pref"+prefAttr+" : "+rs[prefAttr][0]+", "+rs[prefAttr][1] 
 				+"age"+age+" : "+rs[age][0]+", "+rs[age][1] 
 				+"marital"+marital+" : "+rs[marital][0]+", "+rs[marital][1] 
 				+"race"+race+" : "+rs[race][0]+", "+rs[race][1] 
@@ -754,67 +738,56 @@ public class SortGreedy_BLikeness {
 				boolean inRange = true;
 				boolean genRange = true;
 				for (int i : allqueryAttrs){
-					//prefix range(0,ihigh)
-					
-					if (i == prefAttr){
-					
-						//check gen
-						if ((genMx[j]<rs[i][0])||(genMn[j]>rs[i][1])){//gen out of query range.
-							//if (!((genMx[j]<rs[i][1])&&(genMn[j]>rs[i][0]))){//gen not within range.
-							genRange = false;
-							overlap = 0.0;
-						}else{ //there is some overlap:
-							if ((genMn[j]<=rs[i][0])&&(rs[i][1]<=genMx[j])){
-								overlap = (rs[i][1]-rs[i][0]+1.0)/(genMx[j]-genMn[j]+1.0);
-							}else if ((genMn[j]<=rs[i][0])&&(genMx[j]<=rs[i][1])){
-								overlap = (genMx[j]-rs[i][0]+1.0)/(genMx[j]-genMn[j]+1.0);
-							}else if ((rs[i][0]<=genMn[j])&&(rs[i][1]<=genMx[j])){
-								overlap = (rs[i][1]-genMn[j]+1.0)/(genMx[j]-genMn[j]+1.0);
-							}else if ((rs[i][0]<=genMn[j])&&(genMx[j]<=rs[i][1])){
-								overlap = 1.0;
-							}
-						}
-						
-					}else{ //attr==v
-						uniquesetvals = UniqueValsPerAssignMap.get(((10*j)+i));
-						if ( i == age){
-							//continuous with gen range [ageMn, ageMx]
-							int ageMn = uniquesetvals.first();
-							int ageMx = uniquesetvals.last();
-							if ((ageMn <=rs[i][0])&&(rs[i][1]<= ageMx)){
-								//value is within the age gen range
-								overlap = (rs[i][1]-rs[i][0]+1.0)/(ageMx-ageMn +1.0);
-							/*}else if ((ageMn <=rs[i][0])&&(genMx[j]<=rs[i][1])){
-								overlap = (ageMx-rs[i][0]+1.0)/(ageMx-ageMn +1.0);
-							}else if ((rs[i][0]<= ageMn)&&(rs[i][1]<= ageMx)){
-								overlap = (rs[i][1]-ageMn +1.0)/(ageMx-ageMn +1.0);
-							}else if ((rs[i][0]<= ageMn)&&(ageMx <=rs[i][1])){
-								overlap = 1.0;*/
-							}else{
-								//value is outside the age gen range
-								genRange = false;
-								overlap = 0.0;
-							}
-						}else{
-							//categorical with gen set of vals
-							if (uniquesetvals.contains((int)(rs[i][0]))){
-								//overlap = 1.0;
-								overlap = 1.0/(uniquesetvals.size());
-							}else{
-								genRange = false;
-								overlap = 0.0;
-							}
+					genMx = indexToTupleMapping(final_assignment[j][0])[i];//init
+					genMn = indexToTupleMapping(final_assignment[j][0])[i];//init
+					for (int bi=0; bi<buckNum; bi++){
+						//Generalization Range:
+						if (final_assignment[j][bi] < origTuples){ //not a dummy:
+							distVals[bi] = indexToTupleMapping(final_assignment[j][bi])[i];
+							if (genMx < distVals[bi])
+								genMx = distVals[bi];
+							if ((genMn > distVals[bi]) || (genMn==-1))
+								if (-1 != distVals[bi])
+									genMn = distVals[bi];
 						}
 					}
 					
-					r = r * overlap;
-					//System.out.println("r="+r);
+					if ((genMx<rs[i][0])||(genMn>rs[i][1])){//gen out of query range.
+						//if (!((genMx<rs[i][1])&&(genMn>rs[i][0]))){//gen not within range.
+						genRange = false;
+						//break;
+					}else{ //there is some overlap:
+						if (i==age || i==edu_level){ //Continuous:
+							if ((genMn<=rs[i][0])&&(rs[i][1]<=genMx)){
+								overlap = (rs[i][1]-rs[i][0])/(genMx-genMn);
+							}else if ((genMn<=rs[i][0])&&(genMx<=rs[i][1])){
+								overlap = (genMx-rs[i][0])/(genMx-genMn);
+							}else if ((rs[i][0]<=genMn)&&(rs[i][1]<=genMx)){
+								overlap = (rs[i][1]-genMn)/(genMx-genMn);
+							}else if ((rs[i][0]<=genMn)&&(genMx<=rs[i][1])){
+								overlap = 1.0;
+							}
+						}else{ //Categorical:
+							if ((rs[i][0]<=genMn)&&(genMx<=rs[i][1])){
+								overlap = 1.0;
+							}else{
+								int tempCnt = 0;
+								for (int it=0; it<distVals.length; it++){
+									if((distVals[it]>=rs[i][0])&&(distVals[it]<=rs[i][1]))
+										tempCnt++;
+								}
+								overlap = ((double)tempCnt) / ((double)distVals.length);
+							}
+						}
+						r = r * overlap;
+						//System.out.println("r="+r);
+					}
 					
-					//check original
 					if ((indexToTupleMapping(final_assignment[j][0])[i]<rs[i][0])||
-					    (indexToTupleMapping(final_assignment[j][0])[i]>rs[i][1])){
-						//orig either out of range (0,ihigh), or !=v:
+						(indexToTupleMapping(final_assignment[j][0])[i]>rs[i][1])){
+						//orig out of range:
 						inRange = false;
+						break;
 					}
 				}
 				
@@ -857,324 +830,25 @@ public class SortGreedy_BLikeness {
 
 	}
 	
-	/*
-	* naiveBayes: Naive Bayes attack on the original data
-	* given knowlegde of (training on) the anonymized data.
-	*/
-	static double naiveBayes(double[] Laplace_rate){
-		
-		short[] tuple;
-		double[] countQIs = new double[dims];
-		double countSA = 0.0;
-
-		double accuracy_rate = 0.0;
-		double accuracy_rate_Laplace = 0.0;
-		
-		double origLabel = 0.0; //just INIT
-		
-		//COUNT(SA) OCCURENCES ON THE ANONYMISED DATA:
-		//First count all SA frequencies (SAfreq):
-		Map<Short, Double> SAfreq = new HashMap<Short, Double>();
-		Map<String, Map<Short, Double> > QI_map = new HashMap<String, Map<Short, Double> >();
-		short qi_value = 0;
-		short sa_value = 0;
-		double prev_cnt = 0;
-		for (int j = 0; j <final_assignment.length; j++) { //includes dummies.
-			sa_value = indexToTupleMapping(final_assignment[j][0])[SA];
-			if (SAfreq.containsKey(sa_value)) {
-				double tempFreq = SAfreq.get(sa_value) + 1.0;
-				SAfreq.put(sa_value, tempFreq);
-			}else{
-				SAfreq.put(sa_value, 1.0);
-			}
-			/////////////
-			//COUNT(QI|SA) OCCURENCES ON THE ANONYMISED DATA:
-			short genMx=0; //INIT
-			short genMn=0; //INIT
-			for (int i=0; i<dims-1; i++){
-				genMx = indexToTupleMapping(final_assignment[j][0])[i]; //INIT
-				genMn = indexToTupleMapping(final_assignment[j][0])[i]; //INIT
-				for (int bi=0; bi<buckNum; bi++){
-					//Generalization Range:
-					////if (final_assignment[j][bi] < origTuples) //not a dummy:
-					short temp = indexToTupleMapping(final_assignment[j][bi])[i];
-					/*if (i==0 || i==2){ //continuous ranges
-					 //NEEDED!!!
-						if (genMx < temp)
-							genMx = temp;
-						if ((genMn > temp) || (genMn==-1))
-							if (-1 != temp)
-								genMn = temp;
-					}else{ //discrete sets of values */
-						qi_value = temp;
-						if (!QI_map.containsKey(sa_value+"_"+i)){
-							QI_map.put(sa_value+"_"+i, new HashMap<Short, Double>());
-							QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
-						}else{
-							if (!QI_map.get(sa_value+"_"+i).containsKey(qi_value)){
-								QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
-							}else{
-								prev_cnt = (double)QI_map.get(sa_value+"_"+i).get(qi_value);
-								QI_map.get(sa_value+"_"+i).put(qi_value, prev_cnt+1.0);
-							}
-						}
-					//}*/
-				}
-				/*/if (i==0 || i==2){ //continuous ranges
-				 //NEEDED!!!
-					for(qi_value=genMn; qi_value<genMx; qi_value++){ //==
-						if (!QI_map.containsKey(sa_value+"_"+i)){
-							QI_map.put(sa_value+"_"+i, new HashMap<Short, Double>());
-							QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
-						}else{
-							if (!QI_map.get(sa_value+"_"+i).containsKey(qi_value)){
-								QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
-							}else{
-								prev_cnt = (double)QI_map.get(sa_value+"_"+i).get(qi_value);
-								QI_map.get(sa_value+"_"+i).put(qi_value, prev_cnt+1.0);
-							}
-						}
-					}
-					if (genMx-genMn<2){ //==
-						qi_value=genMx;
-						if (!QI_map.containsKey(sa_value+"_"+i)){
-							QI_map.put(sa_value+"_"+i, new HashMap<Short, Double>());
-							QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
-						}else{
-							if (!QI_map.get(sa_value+"_"+i).containsKey(qi_value)){
-								QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
-							}else{
-								prev_cnt = (double)QI_map.get(sa_value+"_"+i).get(qi_value);
-								QI_map.get(sa_value+"_"+i).put(qi_value, prev_cnt+1.0);
-							}
-						}
-					}
-				*/
-				//}
-			}
-		}
-		/////////////
-		
-		////////////////////////////////
-		//count SAs per Assignment, for all different SA values:
-		/*From main: "countSAs = new double[final_assignment.length][cardinalities[SA]];"
-		for (int j=0; j<final_assignment.length; j++){
-			for (short tested_SA : SAfreq.keySet() ){
-				countSAs[j][tested_SA] = 0.0;
-				for (int bi=0; bi<buckNum; bi++){
-					//if (final_assignment[j][bi] < origTuples){ //not a dummy:
-					if (tested_SA == indexToTupleMapping(final_assignment[j][bi])[SA]) {
-						countSAs[j][tested_SA] += 1.0;
-					}
-					//}
-				}
-			}
-		}
-		*/
-		////////////////////////////////
-		/* Count(QI|SA) in the anonymised data.
-		//this should happen _before_ the tuples loop:
-		Map<String, Map<Short, Double> > QI_map = new HashMap<String, Map<Short, Double> >();
-		for (int j=0; j<final_assignment.length; j++){ //for each tuple in the assignemnt
-		//not origTuples!
-			short qi_value = 0;
-			short sa_value = 0;
-			double prev_cnt = 0;
-			for (int bi=0; bi<buckNum; bi++){ // for each bucket
-				sa_value=indexToTupleMapping(final_assignment[j][bi])[SA];
-				for (int i=0; i<dims-1; i++){ // for each QI index
-					//if (final_assignment[j][bi] < origTuples){ //if not a dummy:
-					qi_value=indexToTupleMapping(final_assignment[j][bi])[i];
-					if (!QI_map.containsKey(sa_value+"_"+i)){
-						QI_map.put(sa_value+"_"+i, new HashMap<Short, Double>());
-						QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
-					}else{
-						if (!QI_map.get(sa_value+"_"+i).containsKey(qi_value)){
-							QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
-						}else{
-							prev_cnt = (double)QI_map.get(sa_value+"_"+i).get(qi_value);
-							QI_map.get(sa_value+"_"+i).put(qi_value, prev_cnt+1.0);
-						}
-					}
-					//}
-				}
-			}
-		}
-		*/
-		////////////////////////////////
-		
-		// NOW TEST NAIVE BAYES USING ORIGINAL TUPLES:
-		//Attack each original tuple using Naive Bayes on the anonymous data:
-		for (int row=0; row<origTuples; row++){
-			tuple = map[row];
-			origLabel = tuple[SA]; //true label.
-			
-			//Original NB:
-			double SA_QI_prob = 1.0; // initially 1 -- we multiply it.
-			double SA_predicted_prob = 0.0; // initially 0 -- we replace by greatest.
-			short SA_predicted = 1234;
-			//NB with Laplacian correction:
-			double SA_QI_prob_Laplace = 1.0; // initially 1 -- we multiply it.
-			double SA_predicted_prob_Laplace = 0.0; // initially 0 -- we replace by greatest.
-			short SA_predicted_Laplace = 1234;
-			
-			for (short tested_SA : SAfreq.keySet() ){
-				countSA = SAfreq.get(tested_SA);
-				SA_QI_prob = countSA/tuples; // Prob(SA)
-				SA_QI_prob_Laplace = countSA/tuples; // Prob(SA)
-				//Count(QI|SA), given QI values from tuple:
-				for (int i=0; i<dims-1; i++){ //EACH QI
-					if (!QI_map.get(tested_SA+"_"+i).containsKey(tuple[i])){
-						//Prob[QI_i|SA] = 0
-						SA_QI_prob = SA_QI_prob * 0.0;
-						//Laplace Prob[QI_i|SA] = 1 / cardinalities[i]
-						SA_QI_prob_Laplace = SA_QI_prob_Laplace *
-							(1.0/(countSA+cardinalities[i]));
-					}else{
-						double countQISA = (double)QI_map.get(tested_SA+"_"+i).get(tuple[i]);
-						SA_QI_prob = SA_QI_prob * (countQISA / countSA);
-						SA_QI_prob_Laplace = SA_QI_prob_Laplace *
-							((countQISA+1.0) / (countSA+cardinalities[i]));
-					}
-				}
-				
-				if (SA_predicted_prob < SA_QI_prob){
-					SA_predicted_prob = SA_QI_prob;
-					SA_predicted = tested_SA;
-				}
-				
-				//Do the Laplacian alternative independently:
-				if (SA_predicted_prob_Laplace < SA_QI_prob_Laplace){
-					SA_predicted_prob_Laplace = SA_QI_prob_Laplace;
-					SA_predicted_Laplace = tested_SA;
-				}
-			} //end of P[SA|QI] estimation
-			
-			if(origLabel == SA_predicted){
-				accuracy_rate+=1.0;
-			}
-			
-			if(origLabel == SA_predicted_Laplace){
-				accuracy_rate_Laplace+=1.0;
-			}
-		} //end of tuple attack
-		
-		System.out.println("NB:"+accuracy_rate+" out of "+origTuples+" tuples.");
-		System.out.println("NB_Laplace:"+accuracy_rate_Laplace+" out of "+origTuples+" tuples.");
-		
-		accuracy_rate = accuracy_rate/origTuples; //in our algo: final_assignment.length not origTuples!
-		
-		accuracy_rate_Laplace = accuracy_rate_Laplace/origTuples; //in our algo: final_assignment.length not origTuples!
-		
-		System.out.println("accuracy rate NB_Laplace:"+accuracy_rate_Laplace);
-		
-		Laplace_rate[0] = accuracy_rate_Laplace;
-		
-		return accuracy_rate;
-	}
-	/******************************************/
 	
-	/*
-	* Saves the anonynized data as a csv file 
-	* with the name OUTFILE_SortGreedy.txt 
-	* Please rename it before overiding it. 
-	*/
-	static void saveOutFile(){
-		double genMx, genMn;
-		int[] distVals = new int[buckNum];
-		Set<Integer> setvals;
-		FileWriter fw = null;
-		try{
-			fw = new FileWriter("./OUTFILE_SortGreedy.txt",false); //true == append, false=replace
-
-			//Option 1: This saves cont attributes as 1 comumn. The value is a range: [Min:Max]
-			fw.write("A1,A2,A3,A4,A5,A6,A7,SA\n"); 
-			//Option 2: This saves them as two different attributes (columns): MIN,MAX
-			//fw.write("A1min,A1max,A2,A3min,A3max,A4,A5,A6,A7,SA\n"); 
-
-			for (int j=0; j<final_assignment.length; j++){ 
-				for (int i=0; i<dims; i++){
-					if (i==0 || i==2){ //Continuous:
-						genMx = indexToTupleMapping(final_assignment[j][0])[i];
-						genMn = indexToTupleMapping(final_assignment[j][0])[i];				
-						for (int bi=0; bi<buckNum; bi++){
-							//Generalization Range:
-							if (final_assignment[j][bi] < origTuples){ //not a dummy:
-								distVals[bi] = indexToTupleMapping(final_assignment[j][bi])[i];
-								if (genMx < distVals[bi])
-									genMx = distVals[bi];
-								if ((genMn > distVals[bi]) || (genMn==-1))
-									if (-1 != distVals[bi])
-										genMn = distVals[bi];
-							}
-						}
-						
-						//NOTE: Use this to save as a range [MIN:MAX] :
-						fw.write("[" + genMn + ":" + genMx + "],"); 
-						//
-						//Use this to save as a two different attributes (columns): MIN,MAX, :
-						//fw.write(genMn + "," + genMx + ","); //Use this to save as a two different attributes (columns): MIN,MAX,
-						
-					}else{ //Categorical:
-						fw.write("{;");
-						setvals = new HashSet<Integer>();
-						for (int bi=0; bi<buckNum; bi++){
-							if (final_assignment[j][bi] < origTuples){ //not a dummy:
-								//fw.write(indexToTupleMapping(final_assignment[j][bi])[i] + ";"); //DUPLICATES
-								setvals.add((int)indexToTupleMapping(final_assignment[j][bi])[i]); //UNIQUE VALS
-							}
-						}
-						if (! setvals.isEmpty()){
-							for (Integer v : setvals) {
-								fw.write(v + ";");
-							}
-							setvals.clear();
-						}
-						if (i==7){
-							fw.write("}\n");
-						}else{
-							fw.write("},");
-						}
-					}
-				}		
-			}
-			System.out.println("Saved file: OUTFILE_SortGreedy.txt\nPlease rename the outfile before overiding it.\n");
-			
-		}catch(IOException ioe){//599
-			System.err.println("IOException: " + ioe.getMessage());
-		}finally{
-			try{
-				if(fw != null) fw.close();
-			}catch(Exception e){
-				System.err.println(e.getMessage());
-			}
-		}
-	}
-	///////////////////////////////////////////////////
-	
-
 	//***********//
 	//MAIN METHOD//
 	//***********//
 
 	public static void main(String[] args) 	{
 
-		if (args.length!=9){
-			System.out.println("\nUsage:   java SortGreedy_BLikeness inFile n SA beta part_size part_option rq pq nb");
+		if (args.length!=7){
+			System.out.println("\nUsage:   java SortGreedy_BLikeness inFile n d SA beta part_size part_option th");
 			System.out.println("\t inFile: input file name (path included).");
 			System.out.println("\t n: number of tuples in inFile.");
-			//System.out.println("\t d: dimensionality of the dataset.");
+			System.out.println("\t d: dimensionality of the dataset.");
 			System.out.println("\t SA: index of sensitive attribute [0 -- d-1].");
 			System.out.println("\t l: beta: B-likeness parameter.");
 			System.out.println("\t part_size: size of the bucket partitions.");
-			System.out.println("\t              (ignored if part_option=2 -- no bucket partitioning).");
 			System.out.println("\t part_option: 0 (safer, keeps all SAs distributions), or");
 			System.out.println("\t              1 (better utility, but may cause problems), or ");
-			System.out.println("\t              2 (no bucket partitioning).");
-			System.out.println("\t rq: True with range queries, False without.");
-			System.out.println("\t pq: True with prefix queries, False without.");
-			System.out.println("\t nb: True with naive Bayes attack, False without.\n");
-			//			System.out.println("\t th: distance threshold to place chunk in bucket, in [0, 1].");
+			System.out.println("\t              2 (no bucket partitioning).\n");
+//			System.out.println("\t th: distance threshold to place chunk in bucket, in [0, 1].");
 			return;
 		}
 
@@ -1182,18 +856,13 @@ public class SortGreedy_BLikeness {
 		tuples = Integer.parseInt(args[1]);  // n
 		//dims = Integer.parseInt(args[2]); //d
 		SA = Integer.parseInt(args[2]); //Sensitive Attribute (0 - 7).
-		b_param = Double.parseDouble(args[3]); // beta
+		b_param = Integer.parseInt(args[3]); // beta
 		partition_size = Integer.parseInt(args[4]);
 		partition_function = Integer.parseInt(args[5]);
-		rq = Boolean.parseBoolean(args[6]);
-		pq = Boolean.parseBoolean(args[7]);
-		nb = Boolean.parseBoolean(args[8]);
-		//		threshold = Double.parseDouble(args[7]);
+//		threshold = Double.parseDouble(args[7]);
 		origTuples = tuples;
-		
-		uniqueValsPerAttr = new HashMap<Integer, Set<Short> >();
-		
-		/*
+		q = Boolean.parseBoolean(args[6]);
+/*
 		int modl = (tuples % l_param);
 		if (modl > 0){
 			//change n (#tuples), so that it is divided by l:
@@ -1203,7 +872,7 @@ public class SortGreedy_BLikeness {
 		}
 		map = new short[tuples][dims];
 		buckets = new short[l_param][tuples/l_param][dims];
-		 */
+*/
 		map = new short[tuples][dims];
 		MinMaxPerAttribute = new int[dims][2];
 
@@ -1216,11 +885,6 @@ public class SortGreedy_BLikeness {
 				for (int j=0; j<dims; j++){//init using 1st tuple
 					MinMaxPerAttribute[j][0] = map[i-1][j];
 					MinMaxPerAttribute[j][1] = map[i-1][j];
-					if (j==age||j==gender||j==marital||j==race){
-						Set<Short> uniqueVals = new HashSet<Short>();
-						uniqueVals.add(map[i-1][j]);
-						uniqueValsPerAttr.put(j, uniqueVals);
-					}
 				}
 			}
 			while (tp.hasNext()){
@@ -1232,15 +896,12 @@ public class SortGreedy_BLikeness {
 					if (map[i-1][j] > MinMaxPerAttribute[j][1]){ //max
 						MinMaxPerAttribute[j][1] = map[i-1][j];
 					}
-					if (j==age||j==gender||j==marital||j==race){
-						(uniqueValsPerAttr.get(j)).add(map[i-1][j]);
-					}
 				}
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		/*
+/*
 		if (modl > 0){
 			//add dummy tuples:
 			for(int i=(tuples-(l_param-modl)); i<tuples; i++){
@@ -1253,9 +914,8 @@ public class SortGreedy_BLikeness {
 				}
 			}
 		}
-		 */
+*/
 		long midTime = System.currentTimeMillis();
-		
 		dimension_sort();//sort the dimensions
 		LikenessBuckets bk = new LikenessBuckets(b_param, tuples, dims, map, buckets, 0, inputFile);
 		buckets = bk.bucketization(SA);
@@ -1266,11 +926,10 @@ public class SortGreedy_BLikeness {
 		System.out.println("Time of creating buckets: "+(bucketEndTime - midTime)+" miliseconds.");
 		//bk.printBuckets();
 
-		//Do not delete map... I need it for the NB attack.
-		//map=null; //delete map
+		map=null; //delete map
 		System.gc();
-
-
+		
+		
 		bucket_size = bk.bucketSize;//bucket capacity (c).
 		buckNum = bk.buckNum; //number of buckets (|B|).
 		System.out.println("Number of buckets:"+buckNum);
@@ -1293,18 +952,18 @@ public class SortGreedy_BLikeness {
 		} //else NO_PARTITION //default.
 		System.gc();
 		//bk.printBuckets();
-
+		
 		if((partition_function == 0) || (partition_function == 1)){ //partitioned buckets:
-
+				
 			for (int bucket_index=0; bucket_index<buckNum; bucket_index++){
-
+					
 				int chunk_offset = 0;
 				for (int chunk_index=0; chunk_index<chunk_sizes.size(); chunk_index++){
 					chunk_size = chunk_sizes.get(chunk_index);
 
 					//edges = new HeapNode[chunk_size*chunk_size*2];
 					edges = new HeapNode[chunk_size*chunk_size];
-
+					
 					//we need SA, too!
 					if (MIXED){
 						MinMaxPerAssign = new int[chunk_size][dims-1][2];
@@ -1321,12 +980,12 @@ public class SortGreedy_BLikeness {
 					double[][] array = computeCostMatrix(buckets[bucket_index],buckets[(bucket_index+1)%buckNum], bucket_index*bucket_size, chunk_offset, chunk_size);
 					int[] assignment = new int[array.length];
 					int times = 0;
-
+					
 					while (++times<buckNum){
 						//qSort(0, chunk_size*chunk_size-1);
 						qSort(0, edge_size-1);
 						greedyAssign(array, assignment, chunk_size);//Call SortGreedy algorithm.
-
+						
 						for (int i=0; i<assignment.length; i++){
 							final_assignment[i+chunk_offset+bucket_index*bucket_size][times] = bucketToIndexMapping((bucket_index+times)%buckNum,(chunk_offset+assignment[i]));
 							if (MIXED){
@@ -1355,7 +1014,7 @@ public class SortGreedy_BLikeness {
 			}
 		}else{ //No partitioning:
 			for (int bucket_index=0; bucket_index<buckNum; bucket_index++){
-
+				
 				//edges = new HeapNode[bucket_size*bucket_size*2];
 				edges = new HeapNode[bucket_size*bucket_size];
 				//we need SA, too!
@@ -1372,15 +1031,15 @@ public class SortGreedy_BLikeness {
 				}
 				//HeapComparator hc = new HeapComparator();
 				double[][] array = computeCostMatrix(buckets[bucket_index],buckets[(bucket_index+1)%buckNum], bucket_index*bucket_size, 0, bucket_size);
-
+				
 				int[] assignment = new int[array.length];
 				int times = 0;
-
+				
 				while (++times<buckNum){
 					//qSort(0, bucket_size*bucket_size-1);
 					qSort(0, edge_size-1);
 					greedyAssign(array, assignment, bucket_size);//Call SortGreedy algorithm.
-
+					
 					for (int i=0; i<assignment.length; i++){
 						final_assignment[i+bucket_index*bucket_size][times] = bucketToIndexMapping((bucket_index+times)%buckNum, assignment[i]);
 						if (MIXED){
@@ -1407,10 +1066,10 @@ public class SortGreedy_BLikeness {
 			}
 		}//endif (partition or no_partition)
 
-		//**** BEGIN XUE MINGQIANG **** //
+		//**** BEGIN randomization **** //
 		// this call returns a random assignment generated from the k-regular matching graph
 		int [] rand_A = Randomization.run(final_assignment, 0, final_assignment.length, buckNum);
-		//**** END XUE MINGQIANG **** //
+		//**** END randomization **** //
 		long endTime = System.currentTimeMillis();
 
 		//System.out.println("The winning assignment after "+index+" runs (" + sumType + " sum) is:\n");	
@@ -1422,23 +1081,23 @@ public class SortGreedy_BLikeness {
 			}
 			System.out.println();
 		}
-		 */
+		*/
 
 		System.out.println("Time: "+(endTime - startTime)+"ms  "+"\n Distortion "+ (double)(distortion/((dims-1)*tuples)));
-
+		
 		System.out.println("Saving results.");
 		//Save Results:
 		FileWriter fw = null;
 		try{
-			fw = new FileWriter("./BLik_SortGreedy.txt",true); //true == append
-			fw.write(inputFile+"\t"+origTuples+"\t "+b_param+"\t ");
+			fw = new FileWriter("./SortGreedyResults.txt",true); //true == append
+			fw.write(origTuples+" "+b_param+" ");
 			if((partition_function == 0) || (partition_function == 1)){
-				fw.write(partition_size+"\t ");
+				fw.write(partition_size+" ");
 			}else{
 				fw.write(bucket_size+" ");
 			}
-			fw.write((endTime - startTime)+" \t"
-					+((double)(distortion/((dims-1)*tuples)))+"\n");
+			fw.write((endTime - startTime)+" "
+					 +((double)(distortion/((dims-1)*tuples)))+"\n");
 		}catch(IOException ioe){
 			System.err.println("IOException: " + ioe.getMessage());
 		}finally{
@@ -1448,121 +1107,70 @@ public class SortGreedy_BLikeness {
 				//ignore.
 			}
 		}
-		
+
 		// Q U E R I E S :
-		if (rq==true){
-			System.out.println("Range Queries.");
-			double[] selectivities = {0.05, 0.1, 0.15, 0.2, 0.25};
-			double qErr = 0;
-			FileWriter rqw = null;
+		System.out.println("Queries.");
+		double[] selectivities = {0.05, 0.1, 0.15, 0.2, 0.25};
+		double qErr = 0;
+		FileWriter qw = null;
+		try{
 			int qtimes = 1000; //numer of random queries.
-			try{
-				double[] errArray = new double[qtimes];
-				double[][] tmpres = new double[dims][2];
-				rqw = new FileWriter("./BLik_SortGreedy_RangeQueryError.txt",true); //true == append
-				//rqw.write("#tuples beta size lamda sel error\n");
-				//sel=0.1
-				System.out.println("Vary lambda (sel=0.1): ");
-				for (int l=1; l<dims; l++){
-					rqw.write(inputFile+"\t"+origTuples+"\t "+b_param+"\t "+bucket_size+"\t "+
-							 l+"\t "+selectivities[1]+"\t ");
-					for (int qi=0; qi<dims; qi++){ //INITIALIZATION:
-						tmpres[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min SA value.
-						tmpres[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max SA value
-					}
+			double[] errArray = new double[qtimes];
+			double[] errArrayPref = new double[qtimes];
+			double[][] tmpres = new double[dims][2];
+			qw = new FileWriter("./SortGreedy_QueryError.txt",true); //true == append
 
-					qErr = rangeQueries(selectivities[1], l, tmpres, qtimes, errArray);
-					rqw.write(qErr+" \n");
-				}
-				rqw.write("\n");
-				
-				System.out.println("Vary selectivity (lambda=3): ");
-				int l=3; //lambda = 3 first QIs.
-				for (int i=0; i<selectivities.length; i++){
-					rqw.write(origTuples+" "+b_param+" "+bucket_size+" "+
-							 l+" "+selectivities[i]+" ");
-					for (int qi=0; qi<dims; qi++){ //INITIALIZATION:
-						tmpres[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min SA value.
-						tmpres[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max SA value
-					}
-
-					qErr = rangeQueries(selectivities[i], l, tmpres, qtimes, errArray);
-					rqw.write(qErr+" \n");
-				}
-				rqw.write("\n");
-				
-			}catch(IOException ioe){
-				System.err.println("IOException: " + ioe.getMessage());
-			}finally{
-				try{
-					if(rqw != null) rqw.close();
-				}catch(Exception e){
-					System.err.println(e.getMessage());
-				}
-			}
-		}
-		
-		if (pq==true){
 			System.out.println("Prefix Queries.");
-			double qErr = 0;
-			FileWriter qw = null;
-			int qtimes = 1000; //numer of random queries.
-			try{
-				double[] errArrayPref = new double[qtimes];
-				double[][] tmpres = new double[dims][2];
-				qw = new FileWriter("./BLik_SortGreedy_PrefixQueryError.txt",true); //true == append
-				//qw.write("#tuples beta size error\n");
+			for (int qi=0; qi<dims; qi++){ //INITIALIZATION:
+				tmpres[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min QI value.
+				tmpres[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max QI value
+			}
+			int prefAttr = edu_level; //2
+			qErr = PrefIncQueries(prefAttr, tmpres, qtimes, errArrayPref);
+			qw.write("\n");
+			qw.write(origTuples+" "+b_param+" "+bucket_size+" "+qErr+" \n");
+			System.out.println("Pref Queries: "+origTuples+" "+b_param+" "+bucket_size+" "+qErr+" \n\n");
+			
+			System.out.println("Range Queries.");			
+			//sel=0.1			
+			System.out.println("Vary lambda (sel=0.1): ");
+			for (int l=1; l<dims; l++){
+				qw.write(origTuples+" "+b_param+" "+bucket_size+" "+
+						 l+" "+selectivities[1]+" ");
 				for (int qi=0; qi<dims; qi++){ //INITIALIZATION:
 					tmpres[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min QI value.
 					tmpres[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max QI value
 				}
-				int prefAttr = edu_level; //2
-				qErr = PrefIncQueries(prefAttr, tmpres, qtimes, errArrayPref);
-				qw.write("\n");
-				qw.write(inputFile+"\t"+origTuples+"\t "+b_param+"\t "+bucket_size+"\t "+qErr+" \n");
-				System.out.println("Pref Queries: "+origTuples+" "+b_param+" "+bucket_size+" "+qErr+" \n\n");
-				
-			}catch(IOException ioe){
-				System.err.println("IOException: " + ioe.getMessage());
-			}finally{
-				try{
-					if(qw != null) qw.close();
-				}catch(Exception e){
-					System.err.println(e.getMessage());
-				}
+				qErr = rangeQueries(selectivities[1], l, tmpres, qtimes, errArray);
+				qw.write(qErr+" \n");
 			}
-		}
+			qw.write("\n");
+			
+			System.out.println("Vary selectivity (lambda=3): ");
+			int l=3; //lambda = 3 first QIs.
+			for (int i=0; i<selectivities.length; i++){
+				qw.write(origTuples+" "+b_param+" "+bucket_size+" "+
+						 l+" "+selectivities[i]+" ");
+				for (int qi=0; qi<dims; qi++){ //INITIALIZATION:
+					tmpres[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min QI value.
+					tmpres[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max QI value
+				}
+				qErr = rangeQueries(selectivities[i], l, tmpres, qtimes, errArray);
+				qw.write(qErr+" \n");
+			}
+			qw.write("\n");
 
-		if (nb==true){
-			System.out.println("Naive Bayes Attack.");
-			FileWriter nbw = null;
+		}catch(IOException ioe){
+			System.err.println("IOException: " + ioe.getMessage());
+		}finally{
 			try{
-				nbw = new FileWriter("./BLik_SortGreedy_NaiveBayesAttack.txt",true); //true == append
-				//nbw.write("#tuples beta data accuracy_rate Laplace_rate\n");
-				String dtfile = inputFile.substring(inputFile.lastIndexOf('/')+1,
-								inputFile.lastIndexOf('.'));
-				nbw.write(inputFile+"\t"+origTuples+"\t "+b_param+"\t "+dtfile+"\t ");
-				double[] Laplace_rate = new double[1];
-				Laplace_rate[0] = 0.0;
-				double accuracy_rate = naiveBayes(Laplace_rate);
-				nbw.write(accuracy_rate+"\t "+Laplace_rate[0]+"\n");
-				System.out.println("accuracy_rate = "+accuracy_rate+"\n");
-								
-			}catch(IOException ioe){
-				System.err.println("IOException: " + ioe.getMessage());
-			}finally{
-				try{
-					if(nbw != null) nbw.close();
-				}catch(Exception e){
-					System.err.println(e.getMessage());
-				}
+				if(qw != null) qw.close();
+			}catch(Exception e){
+				System.err.println(e.getMessage());
 			}
 		}
-		//To save the anonymized data as a csv file, uncomment the saveOutFile() line. 
-		//Not recommended for limited disk space, nor needed for evaluation.
-		//saveOutFile();
 	}
-	
+
 	private static double[][] computeCostMatrix(short[][] in1, short[][] in2, int offset, int first, int size) {
 		edge_size = 0;
 
@@ -1584,7 +1192,7 @@ public class SortGreedy_BLikeness {
 				}
 				HeapNode hn = new HeapNode(i,j,c);
 				edges[edge_size++]=hn;
-
+				
 			}
 			final_assignment[offset+first+i][0]= offset+first+i;
 			if (MIXED){
@@ -1627,17 +1235,17 @@ public class SortGreedy_BLikeness {
 
 	private static void recomputeCostMatrix(double[][] array, int bucket_index, int first, int size) {
 		edge_size=0;
-
+		
 		for (int i=0; i<size; i++){
 			for (int j=0; j<size; j++){
 				if (MIXED){
 					array[i][j]=NCP_mixed(buckets[bucket_index][first+j], MinMaxPerAssign[i],
-							distinctValuesPerAssign[i]);
+										  distinctValuesPerAssign[i]);
 					HeapNode hn = new HeapNode(i,j,(array[i][j]));
 					edges[edge_size++]=hn;
 				}else if (RANGE){
 					array[i][j]=NCP_numerical(buckets[bucket_index][first+j], MinMaxPerAssign[i],
-							distinctValues1[i]);
+												  distinctValues1[i]);
 					HeapNode hn = new HeapNode(i,j,(array[i][j]));
 					edges[edge_size++]=hn;
 				}else{
@@ -1652,10 +1260,10 @@ public class SortGreedy_BLikeness {
 	///////////////////Mixed Representation//////////////	
 	private static double NCP_mixed(short[] tuple1, short[] tuple2){
 		double score=0.0;
-
+		
 		//if (tuple1[SA] == tuple2[SA]) //Beta-likeness does not require this!.
 		//	return BIG; //inf
-
+		
 		for (int i=0; i<dims-1; i++){
 			if((tuple1[i]==-1)||(tuple2[i]==-1)){ //Beta-likeness dummy tuple.
 				return 0;
@@ -1676,16 +1284,16 @@ public class SortGreedy_BLikeness {
 		double score=0.0;
 		int min;
 		int max;
-
+		
 		LinkedList<Integer> distinctValues2 = distinctValuesPerDim[dims-1];
 		//if (distinctValues2.contains((int)tuple[SA])) //Beta-likeness does not require this!.
 		//	return BIG; //inf
-
+		
 		for (int i=0; i<dims-1; i++){
 			if(tuple[i]==-1){ //Beta-likeness dummy tuple.
 				return 0;
 			}
-
+			
 			if (i==0 || (i==2)){
 				int[] distinctValues = MinMaxPerDim[i];
 				min = distinctValues[0];
@@ -1715,7 +1323,7 @@ public class SortGreedy_BLikeness {
 	}
 	private static double NCP_mixed(int[][] MinMaxPerDim, LinkedList<Integer>[] distinctValuesPerDim){
 		double score=0.0;
-
+		
 		for (int i=0; i<dims-1; i++){
 			if (i==0 || i==2){
 				int[] distinctValues = MinMaxPerDim[i];
@@ -1746,8 +1354,8 @@ public class SortGreedy_BLikeness {
 			}else{
 				LinkedList<Integer> distValuesPerDim = dValues[i];
 				if (distValuesPerDim != null)
-					if (!distValuesPerDim.contains((int)newTuple[i]))
-						distValuesPerDim.add((int)newTuple[i]);
+				if (!distValuesPerDim.contains((int)newTuple[i]))
+					distValuesPerDim.add((int)newTuple[i]);
 			}
 
 		}
@@ -1758,10 +1366,10 @@ public class SortGreedy_BLikeness {
 	///////////////////Range Representation//////////////			
 	private static double NCP_numerical(short[] tuple1, short[] tuple2){
 		double score=0.0;
-
+		
 		//if (tuple1[SA] == tuple2[SA]) //Beta-likeness does not require this!
 		//	return BIG; //inf
-
+		
 		for (int i=0; i<dims-1; i++){
 			if((tuple1[i]==-1)||(tuple2[i]==-1)){ //Beta-likeness dummy tuple.
 				return 0;
@@ -1771,16 +1379,16 @@ public class SortGreedy_BLikeness {
 		}
 		return score;
 	}
-
+	
 	private static double NCP_numerical(short[] tuple, int[][] MinMaxPerDim,
-			LinkedList<Integer> distinctValues2){
+										LinkedList<Integer> distinctValues2){
 		double score=0.0;
 		int min;
 		int max;
-
+		
 		//if (distinctValues2.contains((int)tuple[SA]))  //Beta-likeness does not require this!
 		//	return BIG; //inf
-
+		
 		for (int i=0; i<dims-1; i++){
 			if(tuple[i]==-1){ //Beta-likeness dummy tuple.
 				return 0;
@@ -1797,17 +1405,17 @@ public class SortGreedy_BLikeness {
 		}
 		return score;
 	}
-
+	
 	private static double NCP_numerical(int[][] MinMaxPerDim){
 		double score=0.0;
 		for (int i=0; i<dims-1; i++){
 			int[] distinctValues = MinMaxPerDim[i];
 			score+=(double)(distinctValues[1]-distinctValues[0])/(double)(cardinalities[i]-1);
-
+			
 		}
 		return score;
 	}
-
+	
 	private static void findSet_numerical(int assign_number, short[] newTuple){
 		int[][] MinMaxPerDim = MinMaxPerAssign[assign_number];
 		if(newTuple[0]==-1){ //Beta-Likeness -- not sure about this!
@@ -1847,11 +1455,11 @@ public class SortGreedy_BLikeness {
 
 	private static double NCP(short[] tuple, LinkedList<Integer>[] distinctValuesPerDim){
 		double score=0.0;
-
+		
 		LinkedList<Integer> distinctValues2 = distinctValuesPerDim[SA];
 		//if (distinctValues2.contains((int)tuple[SA])) //Beta-likeness does not require this!
 		//	return BIG; //inf
-
+		
 		for (int i=0; i<dims-1; i++){
 			if(tuple[i]==-1){ //Beta-likeness dummy tuple.
 				return 0;

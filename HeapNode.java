@@ -2,6 +2,7 @@
 public class HeapNode {
 	int i;
 	int j;
+	
 	double cost;
 
 	public HeapNode(int i, int j, double cost) {
@@ -21,5 +22,6 @@ public class HeapNode {
 	public double getCost() {
 		return cost;
 	}
+	
 
 }

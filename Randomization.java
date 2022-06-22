@@ -1,3 +1,4 @@
+//*** BEGIN XUE MINGQIANG **** ///
 import java.util.*;
 
 class Node {
@@ -133,7 +134,7 @@ public class Randomization {
                 Node t_x = _t_j.getPreImage();
                 Node _t_y = selectNext(t_x, nodeList);
                 if(_t_y == null){
-                    System.out.println("Error: _t_y == null");
+                    System.out.println("Error: _t_j == null");
                     System.exit(1);
                 }
                 t_x.addToVisited(_t_y);
@@ -197,7 +198,7 @@ public class Randomization {
         for(int i=0; i<k; i++){
             //System.out.println("round " + i +":");
             for (int j=0; j<size; j++){
-                int match = final_assignment[offset+j][i] - offset;
+                int match = final_assignment[j][i];
                 nodeList.get(j).getAllOutgoing().add(nodeList.get(match));
             }
         }
@@ -212,4 +213,5 @@ public class Randomization {
     }
 
 }
+//*** END XUE MINGQIANG **** ///
 

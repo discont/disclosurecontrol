@@ -11,11 +11,20 @@ public class Hungarian_BLikeness {
 	private static final boolean MIXED = true;
 	//private static final boolean OPTIMIZATION = true;
 	private static double maxCost = BIG;//0.5436267458828434;
-	static byte[] cardinalities = {79, 2, 17, 6, 9, 10, 83, 51};
+	static byte[] cardinalities = {79, 2, 17, 6, 9, 10, 83, 51}; //age, gender, edu_level, marital, race, work_class, country, occupation
+	//static byte[] cardinalities ={10,6,6,10,41};//Coil2000
+	static int age = 0;
+	static int gender = 1;
+	static int edu_level = 2;
+	static int marital = 3;
+	static int race = 4;
+	static int work_class = 5;
+	static int country = 6;
+	static int occupation = 7;
 	//static byte[] cardinalities ={15,2};
 	//***b*like***//
 	//static int k;// = 10;
-	static int b_param;// = 10;
+	static double b_param;// = 10;
 	static int SA;// 0 - 7.
 	//***b*like***//
 	static int dims = 8; //3
@@ -25,6 +34,9 @@ public class Hungarian_BLikeness {
 	static int buckNum;//tuples/c
 	static int partition_size;//size of bucket partitions.
 	static int partition_function;//type of bucket partitioning.
+	static boolean rq;
+	static boolean pq;
+	static boolean nb;
 	static int parts;//number of partitions per bucket.
 	//static int offset=0;
 	static byte[] dimension = new byte[dims-1];
@@ -37,8 +49,10 @@ public class Hungarian_BLikeness {
 	static int[][] MinMaxPerAttribute; //needed for queries.
 	static int[][] final_assignment;// = new int[tuples][k];
 	static LinkedList<Integer> chunk_sizes = new LinkedList<Integer>();
+	static HeapNode[] edges;
+	static int edge_size;
 	static double threshold;
-
+	static Map<Integer, Set<Short>> uniqueValsPerAttr;
 
 	//*******************************************//
 	//METHODS THAT PERFORM ARRAY-PROCESSING TASKS//
@@ -95,7 +109,7 @@ public class Hungarian_BLikeness {
 		byte temp;
 		while (swapped) {
 			swapped = false;
-            i++;
+			i++;
 			for (int j = 0; j < dimension.length-i;j++) { // smaller range, put it the front
 				if (cardinalities[dimension[j]] > cardinalities[dimension[j+1]]) {
 					temp = dimension[j];
@@ -141,7 +155,7 @@ public class Hungarian_BLikeness {
 				temp2=a[i];
 				a[i]=a[j];
 				a[j]=temp2;
-				
+
 				i++;
 				j--;
 			}
@@ -153,34 +167,6 @@ public class Hungarian_BLikeness {
 			quickSortArray(i, right, a);
 		}
 	}
-	
-	public static void quickSortArray(int left, int right, int[] a) {
-		int i = left, j = right;
-		int ref = left + (right-left)/2; //i.e., (right+left)/2
-		int pivot = a[ref];
-		int temp2;
-		while (i <= j) {
-			while (pivot > a[i])
-				i++;
-			while (a[j] > pivot)
-				j--;
-			if (i <= j) {
-				temp2=a[i];
-				a[i]=a[j];
-				a[j]=temp2;
-				
-				i++;
-				j--;
-			}
-		};
-		// recursion
-		if (left < j)
-			quickSortArray(left, j, a);
-		if (i < right) {
-			quickSortArray(i, right, a);
-		}
-	}
-	
 	// sort data by lexicographical order
 	public static void quickSortBucket(int left, int right, int b) {
 		int i = left, j = right;
@@ -342,6 +328,10 @@ public class Hungarian_BLikeness {
 		}
 	}
 
+	/*
+	 * rangeQueries: Range queries of the form
+	 * (QI_1 ∈(min_1, max_1), ..., QI_N ∈(min_N, max_N), SA ∈(min_S, max_S)) 
+	*/
 	static double rangeQueries(double s, int lambda, double[][] rs, int times, double[] errArray){
 		double error = 0.0;
 		double absError=0.0;
@@ -350,16 +340,16 @@ public class Hungarian_BLikeness {
 		int[] distVals = new int[buckNum];
 		ArrayList<Integer> attrOptions = new ArrayList<Integer>();
 		ArrayList<Integer> choices = new ArrayList<Integer>();
-		//static final int[] attrNumber = new int[]{0, 1, 2, 3, 4, 5 , 6};
+		//static final int[] attrNumber = new int[]{0, 1, 2, 3, 4, 5, 6};
 		
 		sele = Math.pow(s, 1.0/((double)lambda+1.0));
-		
+
 		System.out.println("lambda ="+lambda+": ");
-		
+
 		for (int tm=0; tm<times; tm++){
 			for (int qi=0; qi<dims-1; qi++){ //INITIALIZATION:
-				rs[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min QI value.
-				rs[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max QI value
+				rs[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min SA value.
+				rs[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max SA value
 			}
 			//SA:
 			range = (double)(MinMaxPerAttribute[SA][1] - MinMaxPerAttribute[SA][0]) * sele;
@@ -372,7 +362,7 @@ public class Hungarian_BLikeness {
 			attrOptions.clear();
 			choices.clear();
 			for (int i=0; i<7; i++){ attrOptions.add(i); } //originally
-			
+
 			int temporary = 7;
 			for (int ch=0; ch<lambda; ch++){
 				int next = new Random().nextInt(temporary);
@@ -382,20 +372,20 @@ public class Hungarian_BLikeness {
 				temporary--;
 			}
 			/*
-			 System.out.print("Keeping:= ");
-			 for (int i=0; i<choices.size(); i++){
-			 System.out.print(choices.get(i)+" ");
-			 }
-			 System.out.print("-- Discarding: ");
-			 for (int i=0; i<attrOptions.size(); i++){
-			 System.out.print(attrOptions.get(i)+" ");
-			 }
-			 if (choices.size() != lambda){
-			 System.out.println("WTF: "+choices.size()+" "+lambda);
-			 System.exit(0);
-			 }
-			 System.out.println();
-			 */
+			System.out.print("Keeping:= ");
+			for (int i=0; i<choices.size(); i++){
+				System.out.print(choices.get(i)+" ");
+			}
+			System.out.print("-- Discarding: ");
+			for (int i=0; i<attrOptions.size(); i++){
+				System.out.print(attrOptions.get(i)+" ");
+			}
+			if (choices.size() != lambda){
+				System.out.println("WTF: "+choices.size()+" "+lambda);
+				System.exit(0);
+			}
+			System.out.println();
+			*/
 			for (int ii=0; ii<lambda; ii++){
 				int i = (int)choices.get(ii);
 				if (i==0 || i==2){ //Continuous:
@@ -525,38 +515,579 @@ public class Hungarian_BLikeness {
 
 	}
 	
+	/*
+	 * PrefixQueries: Prefix census queries of the form
+	 * (income ∈(0, ihigh), age = a, marital = m, race = r, gender = g) 
+	*/
+	static double PrefIncQueries(int prefAttr, double[][] rs, int times, double[] errArray){
+		double error = 0.0;
+		double absError=0.0;
+		double[] genMx, genMn;
+		double range, min, max, random, r, overlap;
+		int randomPos;
+		int[] distVals = new int[buckNum];
+		int[] equalityAttrs = {age, marital, race, gender};
+		int[] allqueryAttrs = {prefAttr, age, marital, race, gender};
+		genMx = new double[final_assignment.length];
+		genMn = new double[final_assignment.length];
+		
+		if (prefAttr<0 || prefAttr>=dims){
+			System.err.println("Prefix attribute outside of attribute range [0,"+dims+"]");
+			return -1;
+		}
+		
+		Short[] ages = uniqueValsPerAttr.get(age).toArray(new Short[uniqueValsPerAttr.get(age).size()]);
+		Short[] maritals = uniqueValsPerAttr.get(marital).toArray(new Short[uniqueValsPerAttr.get(marital).size()]);
+		Short[] races = uniqueValsPerAttr.get(race).toArray(new Short[uniqueValsPerAttr.get(race).size()]);
+		Short[] genders = uniqueValsPerAttr.get(gender).toArray(new Short[uniqueValsPerAttr.get(gender).size()]);
+		/*
+		System.out.print("ages ");
+		for (int i=0; i<uniqueValsPerAttr.get(age).size(); i++)
+			System.out.print(ages[i]+" ");
+		System.out.print("\nmaritals ");
+		for (int i=0; i<uniqueValsPerAttr.get(marital).size(); i++)
+			System.out.print(maritals[i]+" ");
+		System.out.print("\nraces ");
+		for (int i=0; i<uniqueValsPerAttr.get(race).size(); i++)
+			System.out.print(races[i]+" ");
+		System.out.print("\ngenders ");
+		for (int i=0; i<uniqueValsPerAttr.get(gender).size(); i++)
+			System.out.print(genders[i]+" ");
+		System.out.println(" ");
+		//System.exit(0);
+		*/
+		
+		TreeSet<Integer> uniquesetvals = new TreeSet<Integer>();;
+		Map<Integer, TreeSet<Integer>> UniqueValsPerAssignMap = new HashMap<Integer, TreeSet<Integer>>();
+		for (int j=0; j<final_assignment.length; j++){ //not origTuples!
+			for (int i : allqueryAttrs){
+				if ( i == prefAttr){
+					genMx[j] = indexToTupleMapping(final_assignment[j][0])[i];//init
+					genMn[j] = indexToTupleMapping(final_assignment[j][0])[i];//init
+				}else{
+					uniquesetvals = new TreeSet<Integer>();
+				}
+				for (int bi=0; bi<buckNum; bi++){
+					//Generalization Range:
+					if (final_assignment[j][bi] < origTuples){ //not a dummy:
+						distVals[bi] = indexToTupleMapping(final_assignment[j][bi])[i];
+						if ( i == prefAttr){
+							if (genMx[j] < distVals[bi])
+								genMx[j] = distVals[bi];
+							if ((genMn[j] > distVals[bi]) || (genMn[i]==-1))
+								if (-1 != distVals[bi])
+									genMn[j] = distVals[bi];
+						}else{
+							//get set of uniquesetvals[j][i]
+							uniquesetvals.add(distVals[bi]);
+						}
+					}
+				}
+				if ( i != prefAttr){
+					UniqueValsPerAssignMap.put(((10*j)+i), uniquesetvals);
+				}
+			}
+		}
+		
+		for (int tm=0; tm<times; tm++){
+			//for (int qi=0; qi<dims-1; qi++){ //INITIALIZATION:
+			//	rs[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min QI value.
+			//	rs[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max QI value
+			//}
+			//PREFIX (0,high):
+			min = (double)MinMaxPerAttribute[prefAttr][0];//min attribute value.
+			max = (double)MinMaxPerAttribute[prefAttr][1];//max attribute value.
+			random = new Random().nextDouble();//random number between 0.0 and 1.0
+			rs[prefAttr][0] = min;
+			rs[prefAttr][1] = min + (random * (max-min));//number between min and max.
+			
+			//OTHERS: (age = a, marital = m, race = r, gender = g) 
+			/*for (int i: equalityAttrs){
+				min = (double)MinMaxPerAttribute[i][0];//min attribute value.
+				max = (double)MinMaxPerAttribute[i][1];//max attribute value.
+				random = new Random().nextDouble(); //random number from 0.0 to 1.0
+				rs[i][0] = min + (double)Math.round(random * (max-min)); //becomes number from min to max
+				rs[i][1] = rs[i][0]; //equality age=a
+			}*/
+			
+			
+			//age
+			random = new Random().nextDouble(); //random number from 0.0 to 1.0
+			randomPos = (int)(Math.round(random * ((double)(uniqueValsPerAttr.get(age).size()-1))));
+			rs[age][0] = ages[randomPos]; // -0.5; //becomes number from min to max
+			rs[age][1] = ages[randomPos]; // +0.5; //equality age=a
+
+			//marital 
+			random = new Random().nextDouble(); //random number from 0.0 to 1.0
+			randomPos = (int)(Math.round(random * ((double)(uniqueValsPerAttr.get(marital).size()-1))));
+			rs[marital][0] = maritals[randomPos]; // -0.5; //becomes number from min to max
+			rs[marital][1] = maritals[randomPos]; // +0.5; //equality marital=m+-0.5
+			
+			//race 
+			random = new Random().nextDouble(); //random number from 0.0 to 1.0
+			randomPos = (int)(Math.round(random * ((double)(uniqueValsPerAttr.get(race).size()-1))));
+			rs[race][0] = races[randomPos]; // -0.5; //becomes number from min to max
+			rs[race][1] = races[randomPos]; // +0.5; //equality race=r
+			
+			//gender 
+			random = new Random().nextDouble(); //random number from 0.0 to 1.0
+			randomPos = (int)(Math.round(random * ((double)(uniqueValsPerAttr.get(gender).size()-1))));
+			rs[gender][0] = genders[randomPos]; // -0.5; //becomes number from min to max
+			rs[gender][1] = genders[randomPos]; // +0.5; //equality gender=g
+			
+			/*System.out.println("pref"+prefAttr+" : "+rs[prefAttr][0]+", "+rs[prefAttr][1] 
+				+"age"+age+" : "+rs[age][0]+", "+rs[age][1] 
+				+"marital"+marital+" : "+rs[marital][0]+", "+rs[marital][1] 
+				+"race"+race+" : "+rs[race][0]+", "+rs[race][1] 
+				+"gender"+gender+" : "+rs[gender][0]+", "+rs[gender][1] );
+			*/
+
+			//evaluate query error
+			double cnt = 0; double anonCnt = 0;
+			for (int j=0; j<final_assignment.length; j++){ //not origTuples!
+				r = 1.0; overlap=1.0;
+				boolean inRange = true;
+				boolean genRange = true;
+				for (int i : allqueryAttrs){
+					//prefix range(0,ihigh)
+					
+					if (i == prefAttr){
+					
+						//check gen
+						if ((genMx[j]<rs[i][0])||(genMn[j]>rs[i][1])){//gen out of query range.
+							//if (!((genMx[j]<rs[i][1])&&(genMn[j]>rs[i][0]))){//gen not within range.
+							genRange = false;
+							overlap = 0.0;
+						}else{ //there is some overlap:
+							if ((genMn[j]<=rs[i][0])&&(rs[i][1]<=genMx[j])){
+								overlap = (rs[i][1]-rs[i][0]+1.0)/(genMx[j]-genMn[j]+1.0);
+							}else if ((genMn[j]<=rs[i][0])&&(genMx[j]<=rs[i][1])){
+								overlap = (genMx[j]-rs[i][0]+1.0)/(genMx[j]-genMn[j]+1.0);
+							}else if ((rs[i][0]<=genMn[j])&&(rs[i][1]<=genMx[j])){
+								overlap = (rs[i][1]-genMn[j]+1.0)/(genMx[j]-genMn[j]+1.0);
+							}else if ((rs[i][0]<=genMn[j])&&(genMx[j]<=rs[i][1])){
+								overlap = 1.0;
+							}
+						}
+						
+					}else{ //attr==v
+						uniquesetvals = UniqueValsPerAssignMap.get(((10*j)+i));
+						if ( i == age){
+							//continuous with gen range [ageMn, ageMx]
+							int ageMn = uniquesetvals.first();
+							int ageMx = uniquesetvals.last();
+							if ((ageMn <=rs[i][0])&&(rs[i][1]<= ageMx)){
+								//value is within the age gen range
+								overlap = (rs[i][1]-rs[i][0]+1.0)/(ageMx-ageMn +1.0);
+							/*}else if ((ageMn <=rs[i][0])&&(genMx[j]<=rs[i][1])){
+								overlap = (ageMx-rs[i][0]+1.0)/(ageMx-ageMn +1.0);
+							}else if ((rs[i][0]<= ageMn)&&(rs[i][1]<= ageMx)){
+								overlap = (rs[i][1]-ageMn +1.0)/(ageMx-ageMn +1.0);
+							}else if ((rs[i][0]<= ageMn)&&(ageMx <=rs[i][1])){
+								overlap = 1.0;*/
+							}else{
+								//value is outside the age gen range
+								genRange = false;
+								overlap = 0.0;
+							}
+						}else{
+							//categorical with gen set of vals
+							if (uniquesetvals.contains((int)(rs[i][0]))){
+								//overlap = 1.0;
+								overlap = 1.0/(uniquesetvals.size());
+							}else{
+								genRange = false;
+								overlap = 0.0;
+							}
+						}
+					}
+					
+					r = r * overlap;
+					//System.out.println("r="+r);
+					
+					//check original
+					if ((indexToTupleMapping(final_assignment[j][0])[i]<rs[i][0])||
+					    (indexToTupleMapping(final_assignment[j][0])[i]>rs[i][1])){
+						//orig either out of range (0,ihigh), or !=v:
+						inRange = false;
+					}
+				}
+				
+				if (true == inRange){
+					//System.out.println("orig +1 ");
+					cnt++;
+				}
+				if (true == genRange){
+					//System.out.println("anon +r "+r);
+					anonCnt += r;
+				}
+			}
+			//System.out.println(cnt+" "+anonCnt);
+			if (cnt!=0){
+				//System.out.print(tm+" ");
+				error += (((double)Math.abs(anonCnt - cnt)) / ((double)cnt));
+				absError += (((double)Math.abs(anonCnt - cnt)));
+				errArray[tm] = (((double)Math.abs(anonCnt - cnt)) / ((double)cnt));
+			}else{
+				tm--; //repeat.
+			}
+			
+		}
+		quickSortArray(0, times-1, errArray);
+		double median = (errArray[(times/2)-1]);
+		System.out.println("query error (beta="+b_param+"): mean rel error="
+						   +((error/(double)times))+" abs error="+(absError/times)
+						   +" median rel error="+median);
+		System.out.println("min="+errArray[0]+" max="+errArray[times-1]);
+		return median;
+		
+		/*
+		 double mean = 0.0;
+		 for (i=0; i<errArray.size(); i++){
+		 mean += errArray[i];
+		 }
+		 mean = mean / errArray.size();
+		 return mean;
+		 */
+
+	}
+	
+	/*
+	* naiveBayes: Naive Bayes attack on the original data
+	* given knowlegde of (training on) the anonymized data.
+	*/
+	static double naiveBayes(double[] Laplace_rate){
+		
+		short[] tuple;
+		double[] countQIs = new double[dims];
+		double countSA = 0.0;
+
+		double accuracy_rate = 0.0;
+		double accuracy_rate_Laplace = 0.0;
+		
+		double origLabel = 0.0; //just INIT
+		
+		//COUNT(SA) OCCURENCES ON THE ANONYMISED DATA:
+		//First count all SA frequencies (SAfreq):
+		Map<Short, Double> SAfreq = new HashMap<Short, Double>();
+		Map<String, Map<Short, Double> > QI_map = new HashMap<String, Map<Short, Double> >();
+		short qi_value = 0;
+		short sa_value = 0;
+		double prev_cnt = 0;
+		for (int j = 0; j <final_assignment.length; j++) { //includes dummies.
+			sa_value = indexToTupleMapping(final_assignment[j][0])[SA];
+			if (SAfreq.containsKey(sa_value)) {
+				double tempFreq = SAfreq.get(sa_value) + 1.0;
+				SAfreq.put(sa_value, tempFreq);
+			}else{
+				SAfreq.put(sa_value, 1.0);
+			}
+			/////////////
+			//COUNT(QI|SA) OCCURENCES ON THE ANONYMISED DATA:
+			short genMx=0; //INIT
+			short genMn=0; //INIT
+			for (int i=0; i<dims-1; i++){
+				genMx = indexToTupleMapping(final_assignment[j][0])[i]; //INIT
+				genMn = indexToTupleMapping(final_assignment[j][0])[i]; //INIT
+				for (int bi=0; bi<buckNum; bi++){
+					//Generalization Range:
+					////if (final_assignment[j][bi] < origTuples) //not a dummy:
+					short temp = indexToTupleMapping(final_assignment[j][bi])[i];
+					/*if (i==0 || i==2){ //continuous ranges
+					 //NEEDED!!!
+						if (genMx < temp)
+							genMx = temp;
+						if ((genMn > temp) || (genMn==-1))
+							if (-1 != temp)
+								genMn = temp;
+					}else{ //discrete sets of values */
+						qi_value = temp;
+						if (!QI_map.containsKey(sa_value+"_"+i)){
+							QI_map.put(sa_value+"_"+i, new HashMap<Short, Double>());
+							QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
+						}else{
+							if (!QI_map.get(sa_value+"_"+i).containsKey(qi_value)){
+								QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
+							}else{
+								prev_cnt = (double)QI_map.get(sa_value+"_"+i).get(qi_value);
+								QI_map.get(sa_value+"_"+i).put(qi_value, prev_cnt+1.0);
+							}
+						}
+					//}*/
+				}
+				/*/if (i==0 || i==2){ //continuous ranges
+				 //NEEDED!!!
+					for(qi_value=genMn; qi_value<genMx; qi_value++){ //==
+						if (!QI_map.containsKey(sa_value+"_"+i)){
+							QI_map.put(sa_value+"_"+i, new HashMap<Short, Double>());
+							QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
+						}else{
+							if (!QI_map.get(sa_value+"_"+i).containsKey(qi_value)){
+								QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
+							}else{
+								prev_cnt = (double)QI_map.get(sa_value+"_"+i).get(qi_value);
+								QI_map.get(sa_value+"_"+i).put(qi_value, prev_cnt+1.0);
+							}
+						}
+					}
+					if (genMx-genMn<2){ //==
+						qi_value=genMx;
+						if (!QI_map.containsKey(sa_value+"_"+i)){
+							QI_map.put(sa_value+"_"+i, new HashMap<Short, Double>());
+							QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
+						}else{
+							if (!QI_map.get(sa_value+"_"+i).containsKey(qi_value)){
+								QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
+							}else{
+								prev_cnt = (double)QI_map.get(sa_value+"_"+i).get(qi_value);
+								QI_map.get(sa_value+"_"+i).put(qi_value, prev_cnt+1.0);
+							}
+						}
+					}
+				*/
+				//}
+			}
+		}
+		/////////////
+		
+		////////////////////////////////
+		//count SAs per Assignment, for all different SA values:
+		/*From main: "countSAs = new double[final_assignment.length][cardinalities[SA]];"
+		for (int j=0; j<final_assignment.length; j++){
+			for (short tested_SA : SAfreq.keySet() ){
+				countSAs[j][tested_SA] = 0.0;
+				for (int bi=0; bi<buckNum; bi++){
+					//if (final_assignment[j][bi] < origTuples){ //not a dummy:
+					if (tested_SA == indexToTupleMapping(final_assignment[j][bi])[SA]) {
+						countSAs[j][tested_SA] += 1.0;
+					}
+					//}
+				}
+			}
+		}
+		*/
+		////////////////////////////////
+		/* Count(QI|SA) in the anonymised data.
+		//this should happen _before_ the tuples loop:
+		Map<String, Map<Short, Double> > QI_map = new HashMap<String, Map<Short, Double> >();
+		for (int j=0; j<final_assignment.length; j++){ //for each tuple in the assignemnt
+		//not origTuples!
+			short qi_value = 0;
+			short sa_value = 0;
+			double prev_cnt = 0;
+			for (int bi=0; bi<buckNum; bi++){ // for each bucket
+				sa_value=indexToTupleMapping(final_assignment[j][bi])[SA];
+				for (int i=0; i<dims-1; i++){ // for each QI index
+					//if (final_assignment[j][bi] < origTuples){ //if not a dummy:
+					qi_value=indexToTupleMapping(final_assignment[j][bi])[i];
+					if (!QI_map.containsKey(sa_value+"_"+i)){
+						QI_map.put(sa_value+"_"+i, new HashMap<Short, Double>());
+						QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
+					}else{
+						if (!QI_map.get(sa_value+"_"+i).containsKey(qi_value)){
+							QI_map.get(sa_value+"_"+i).put(qi_value, 1.0);
+						}else{
+							prev_cnt = (double)QI_map.get(sa_value+"_"+i).get(qi_value);
+							QI_map.get(sa_value+"_"+i).put(qi_value, prev_cnt+1.0);
+						}
+					}
+					//}
+				}
+			}
+		}
+		*/
+		////////////////////////////////
+		
+		// NOW TEST NAIVE BAYES USING ORIGINAL TUPLES:
+		//Attack each original tuple using Naive Bayes on the anonymous data:
+		for (int row=0; row<origTuples; row++){
+			tuple = map[row];
+			origLabel = tuple[SA]; //true label.
+			
+			//Original NB:
+			double SA_QI_prob = 1.0; // initially 1 -- we multiply it.
+			double SA_predicted_prob = 0.0; // initially 0 -- we replace by greatest.
+			short SA_predicted = 1234;
+			//NB with Laplacian correction:
+			double SA_QI_prob_Laplace = 1.0; // initially 1 -- we multiply it.
+			double SA_predicted_prob_Laplace = 0.0; // initially 0 -- we replace by greatest.
+			short SA_predicted_Laplace = 1234;
+			
+			for (short tested_SA : SAfreq.keySet() ){
+				countSA = SAfreq.get(tested_SA);
+				SA_QI_prob = countSA/tuples; // Prob(SA)
+				SA_QI_prob_Laplace = countSA/tuples; // Prob(SA)
+				//Count(QI|SA), given QI values from tuple:
+				for (int i=0; i<dims-1; i++){ //EACH QI
+					if (!QI_map.get(tested_SA+"_"+i).containsKey(tuple[i])){
+						//Prob[QI_i|SA] = 0
+						SA_QI_prob = SA_QI_prob * 0.0;
+						//Laplace Prob[QI_i|SA] = 1 / cardinalities[i]
+						SA_QI_prob_Laplace = SA_QI_prob_Laplace *
+							(1.0/(countSA+cardinalities[i]));
+					}else{
+						double countQISA = (double)QI_map.get(tested_SA+"_"+i).get(tuple[i]);
+						SA_QI_prob = SA_QI_prob * (countQISA / countSA);
+						SA_QI_prob_Laplace = SA_QI_prob_Laplace *
+							((countQISA+1.0) / (countSA+cardinalities[i]));
+					}
+				}
+				
+				if (SA_predicted_prob < SA_QI_prob){
+					SA_predicted_prob = SA_QI_prob;
+					SA_predicted = tested_SA;
+				}
+				
+				//Do the Laplacian alternative independently:
+				if (SA_predicted_prob_Laplace < SA_QI_prob_Laplace){
+					SA_predicted_prob_Laplace = SA_QI_prob_Laplace;
+					SA_predicted_Laplace = tested_SA;
+				}
+			} //end of P[SA|QI] estimation
+			
+			if(origLabel == SA_predicted){
+				accuracy_rate+=1.0;
+			}
+			
+			if(origLabel == SA_predicted_Laplace){
+				accuracy_rate_Laplace+=1.0;
+			}
+		} //end of tuple attack
+		
+		System.out.println("NB:"+accuracy_rate+" out of "+origTuples+" tuples.");
+		System.out.println("NB_Laplace:"+accuracy_rate_Laplace+" out of "+origTuples+" tuples.");
+		
+		accuracy_rate = accuracy_rate/origTuples; //in our algo: final_assignment.length not origTuples!
+		
+		accuracy_rate_Laplace = accuracy_rate_Laplace/origTuples; //in our algo: final_assignment.length not origTuples!
+		
+		System.out.println("accuracy rate NB_Laplace:"+accuracy_rate_Laplace);
+		
+		Laplace_rate[0] = accuracy_rate_Laplace;
+		
+		return accuracy_rate;
+	}
+	/******************************************/
+	
+	/*
+	* Saves the anonynized data as a csv file 
+	* with the name OUTFILE_Hungarian.txt 
+	* Please rename it before overiding it. 
+	*/
+	static void saveOutFile(){
+		double genMx, genMn;
+		int[] distVals = new int[buckNum];
+		Set<Integer> setvals;
+		FileWriter fw = null;
+		try{
+			fw = new FileWriter("./OUTFILE_Hungarian.txt",false); //true == append, false=replace
+
+			//Option 1: This saves cont attributes as 1 comumn. The value is a range: [Min:Max]
+			fw.write("A1,A2,A3,A4,A5,A6,A7,SA\n"); 
+			//Option 2: This saves them as two different attributes (columns): MIN,MAX
+			//fw.write("A1min,A1max,A2,A3min,A3max,A4,A5,A6,A7,SA\n"); 
+
+			for (int j=0; j<final_assignment.length; j++){ 
+				for (int i=0; i<dims; i++){
+					if (i==0 || i==2){ //Continuous:
+						genMx = indexToTupleMapping(final_assignment[j][0])[i];
+						genMn = indexToTupleMapping(final_assignment[j][0])[i];				
+						for (int bi=0; bi<buckNum; bi++){
+							//Generalization Range:
+							if (final_assignment[j][bi] < origTuples){ //not a dummy:
+								distVals[bi] = indexToTupleMapping(final_assignment[j][bi])[i];
+								if (genMx < distVals[bi])
+									genMx = distVals[bi];
+								if ((genMn > distVals[bi]) || (genMn==-1))
+									if (-1 != distVals[bi])
+										genMn = distVals[bi];
+							}
+						}
+						
+						//NOTE: Use this to save as a range [MIN:MAX] :
+						fw.write("[" + genMn + ":" + genMx + "],"); 
+						//
+						//Use this to save as a two different attributes (columns): MIN,MAX, :
+						//fw.write(genMn + "," + genMx + ","); //Use this to save as a two different attributes (columns): MIN,MAX,
+						
+					}else{ //Categorical:
+						fw.write("{;");
+						setvals = new HashSet<Integer>();
+						for (int bi=0; bi<buckNum; bi++){
+							if (final_assignment[j][bi] < origTuples){ //not a dummy:
+								//fw.write(indexToTupleMapping(final_assignment[j][bi])[i] + ";"); //DUPLICATES
+								setvals.add((int)indexToTupleMapping(final_assignment[j][bi])[i]); //UNIQUE VALS
+							}
+						}
+						if (! setvals.isEmpty()){
+							for (Integer v : setvals) {
+								fw.write(v + ";");
+							}
+							setvals.clear();
+						}
+						if (i==7){
+							fw.write("}\n");
+						}else{
+							fw.write("},");
+						}
+					}
+				}		
+			}
+			System.out.println("Saved file: OUTFILE_Hungarian.txt\nPlease rename the outfile before overiding it.\n");
+			
+		}catch(IOException ioe){//599
+			System.err.println("IOException: " + ioe.getMessage());
+		}finally{
+			try{
+				if(fw != null) fw.close();
+			}catch(Exception e){
+				System.err.println(e.getMessage());
+			}
+		}
+	}
+	///////////////////////////////////////////////////
+	
 	//***********//
 	//MAIN METHOD//
 	//***********//
 
 	public static void main(String[] args) 	{
 
-		if (args.length!=7){
-			System.out.println("\nUsage:   java Hungarian_BLikeness inFile n d SA beta part_size part_option");
+		if (args.length!=9){
+			System.out.println("\nUsage:   java Hungarian_BLikeness inFile n SA beta part_size part_option rq pq nb");
 			System.out.println("\t inFile: input file name (path included).");
 			System.out.println("\t n: number of tuples in inFile.");
-			System.out.println("\t d: dimensionality of the dataset.");
-			System.out.println("\t SA: index of sensitive attribute [0-7].");
-			System.out.println("\t beta: B-likeness parameter.");
+			//System.out.println("\t d: dimensionality of the dataset.");
+			System.out.println("\t SA: index of sensitive attribute [0 -- d-1].");
+			System.out.println("\t l: beta: B-likeness parameter.");
 			System.out.println("\t part_size: size of the bucket partitions.");
+			System.out.println("\t              (ignored if part_option=2 -- no bucket partitioning).");
 			System.out.println("\t part_option: 0 (safer, keeps all SAs distributions), or");
 			System.out.println("\t              1 (better utility, but may cause problems), or ");
-			System.out.println("\t              2 (no bucket partitioning).\n");
-//			System.out.println("\t th: distance threshold to place chunk in bucket, in [0, 1].");
+			System.out.println("\t              2 (no bucket partitioning).");
+			System.out.println("\t rq: True with range queries, False without.");
+			System.out.println("\t pq: True with prefix queries, False without.");
+			System.out.println("\t nb: True with naive Bayes attack, False without.\n");
+			//			System.out.println("\t th: distance threshold to place chunk in bucket, in [0, 1].");
 			return;
 		}
 
 		String inputFile = args[0];
 		tuples = Integer.parseInt(args[1]);  // n
-		dims = Integer.parseInt(args[2]); //d
-		SA = Integer.parseInt(args[3]); //Sensitive Attribute (0 - 7).
-		b_param = Integer.parseInt(args[4]); // l
-		partition_size = Integer.parseInt(args[5]);
-		partition_function = Integer.parseInt(args[6]);
+		//dims = Integer.parseInt(args[2]); //d
+		SA = Integer.parseInt(args[2]); //Sensitive Attribute (0 - 7).
+		b_param = Double.parseDouble(args[3]); // beta
+		partition_size = Integer.parseInt(args[4]);
+		partition_function = Integer.parseInt(args[5]);
+		rq = Boolean.parseBoolean(args[6]);
+		pq = Boolean.parseBoolean(args[7]);
+		nb = Boolean.parseBoolean(args[8]);
 		//threshold = Double.parseDouble(args[7]);
 		origTuples = tuples;
+		
+		uniqueValsPerAttr = new HashMap<Integer, Set<Short> >();
 
-/*
+		/*
 		int modl = (tuples % l_param);
 		if (modl > 0){
 			//change n (#tuples), so that it is divided by l:
@@ -566,15 +1097,27 @@ public class Hungarian_BLikeness {
 		}
 		map = new short[tuples][dims];
 		buckets = new short[l_param][tuples/l_param][dims];
-*/
+		 */
 		map = new short[tuples][dims];
 		MinMaxPerAttribute = new int[dims][2];
 
-		
+
 		long startTime = System.currentTimeMillis();
 		try {
 			CensusParser tp = new CensusParser(inputFile, dims);
 			int i=0;
+			if (tp.hasNext()){
+				map[i++]=tp.nextTuple2();
+				for (int j=0; j<dims; j++){//init using 1st tuple
+					MinMaxPerAttribute[j][0] = map[i-1][j];
+					MinMaxPerAttribute[j][1] = map[i-1][j];
+					if (j==age||j==gender||j==marital||j==race){
+						Set<Short> uniqueVals = new HashSet<Short>();
+						uniqueVals.add(map[i-1][j]);
+						uniqueValsPerAttr.put(j, uniqueVals);
+					}
+				}
+			}
 			while (tp.hasNext()){
 				map[i++]=tp.nextTuple2();
 				for (int j=0; j<dims; j++){
@@ -584,12 +1127,15 @@ public class Hungarian_BLikeness {
 					if (map[i-1][j] > MinMaxPerAttribute[j][1]){ //max
 						MinMaxPerAttribute[j][1] = map[i-1][j];
 					}
+					if (j==age||j==gender||j==marital||j==race){
+						(uniqueValsPerAttr.get(j)).add(map[i-1][j]);
+					}
 				}
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-/*
+		/*
 		if (modl > 0){
 			//add dummy tuples:
 			for(int i=(tuples-(l_param-modl)); i<tuples; i++){
@@ -602,10 +1148,10 @@ public class Hungarian_BLikeness {
 				}
 			}
 		}
-*/
-		
+		 */
+
 		long midTime = System.currentTimeMillis();
-		
+
 		dimension_sort();//sort the dimensions
 		LikenessBuckets bk = new LikenessBuckets(b_param, tuples, dims, map, buckets, 0, inputFile);
 		buckets = bk.bucketization(SA);
@@ -616,14 +1162,15 @@ public class Hungarian_BLikeness {
 		System.out.println("Time of creating buckets: "+(bucketEndTime - midTime)+" miliseconds.");
 		//bk.printBuckets();
 
-		map=null; //delete map
+		//Do not delete map... I need it for the NB attack.
+		//map=null; //delete map
 		System.gc();
 		//-----------------------------------------------------------//		
 		TopCoderAlgo algo = new TopCoderAlgo();
 
 		//Below enter "max" or "min" to find maximum sum or minimum sum assignment.
 		String sumType = "min";
-		
+
 		bucket_size = bk.bucketSize;//bucket capacity (c).
 		buckNum = bk.buckNum; //number of buckets (|B|).
 		System.out.println("Number of buckets:"+buckNum);
@@ -761,10 +1308,10 @@ public class Hungarian_BLikeness {
 
 		long mTime = System.currentTimeMillis();
 
-		//**** BEGIN Randomization **** //
+		//**** BEGIN XUE MINGQIANG **** //
 		// this call returns a random assignment generated from the k-regular matching graph
 		int [] rand_A = Randomization.run(final_assignment, 0, final_assignment.length, buckNum);
-		//**** END Randomization **** //
+		//**** END XUE MINGQIANG **** //
 		long endTime = System.currentTimeMillis();
 
 		//System.out.println("The winning assignment after "+index+" runs (" + sumType + " sum) is:\n");	
@@ -776,7 +1323,7 @@ public class Hungarian_BLikeness {
 			}
 			System.out.println();
 		}
-		*/
+		 */
 
 		System.out.println("Time: "+(endTime - startTime)+"ms  "+"\n Distortion "+ (double)(distortion/((dims-1)*tuples)));
 
@@ -784,14 +1331,14 @@ public class Hungarian_BLikeness {
 		//Save Results:
 		FileWriter fw = null;
 		try{
-			fw = new FileWriter("./LDivResults.txt",true); //true == append
-			fw.write(origTuples+" "+b_param+" ");
+			fw = new FileWriter("./BLik_Hungarian.txt",true); //true == append
+			fw.write(inputFile+"\t"+origTuples+"\t "+b_param+"\t ");
 			if((partition_function == 0) || (partition_function == 1)){
-				fw.write(partition_size+" ");
+				fw.write(partition_size+"\t ");
 			}else{
 				fw.write(bucket_size+" ");
 			}
-			fw.write((endTime - startTime)+" "+(endTime-mTime)+" "+
+			fw.write((endTime - startTime)+"\t "+(endTime-mTime)+"\t "+
 					+((double)(distortion/((dims-1)*tuples)))+"\n");
 		}catch(IOException ioe){
 			System.err.println("IOException: " + ioe.getMessage());
@@ -802,65 +1349,119 @@ public class Hungarian_BLikeness {
 				System.err.println(e.getMessage());
 			}
 		}
-
-		System.out.println("Range Queries.");
-		double[] selectivities = {0.05, 0.1, 0.15, 0.2, 0.25};
-		double qErr = 0;
-		FileWriter qw = null;
-		try{
+		
+		// Q U E R I E S :
+		if (rq==true){
+			System.out.println("Range Queries.");
+			double[] selectivities = {0.05, 0.1, 0.15, 0.2, 0.25};
+			double qErr = 0;
+			FileWriter rqw = null;
 			int qtimes = 1000; //numer of random queries.
-			double[] errArray = new double[qtimes];
-			qw = new FileWriter("./Hungarian_QueryError.txt",true); //true == append
-			//qw.write("#tuples beta size lambda sel error\n");
-			/*
-			 for (int i=0; i<selectivities.length; i++){
-			 for (int l=1; l<dims; l++){
-			 qw.write(origTuples+" "+b_param+" "+bucket_size+" "+
-			 l+" "+selectivities[i]+" ");
-			 double[][] tmpres = new double[l+1][2];
-			 qErr = rangeQueries(selectivities[i], l, tmpres, qtimes);
-			 qw.write(qErr+" \n");
-			 }
-			 }
-			 */
-			//sel=0.1
-			double[][] tmpres = new double[dims][2];
-			
-			System.out.println("Vary lambda (sel=0.1): ");
-			for (int l=1; l<dims; l++){
-				qw.write(origTuples+" "+b_param+" "+bucket_size+" "+
-						 l+" "+selectivities[1]+" ");
-				for (int qi=0; qi<dims; qi++){ //INITIALIZATION:
-					tmpres[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min QI value.
-					tmpres[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max QI value
-				}
-				qErr = rangeQueries(selectivities[1], l, tmpres, qtimes, errArray);
-				qw.write(qErr+" \n");
-			}
-			qw.write("\n");
-			System.out.println("Vary selectivity (lambda=3): ");
-			int l=3; //lambda = 3 first QIs.
-			for (int i=0; i<selectivities.length; i++){
-				qw.write(origTuples+" "+b_param+" "+bucket_size+" "+
-						 l+" "+selectivities[i]+" ");
-				for (int qi=0; qi<dims; qi++){ //INITIALIZATION:
-					tmpres[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min QI value.
-					tmpres[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max QI value
-				}
-				qErr = rangeQueries(selectivities[i], l, tmpres, qtimes, errArray);
-				qw.write(qErr+" \n");
-			}
-			qw.write("\n");
-		}catch(IOException ioe){
-			System.err.println("IOException: " + ioe.getMessage());
-		}finally{
 			try{
-				if(qw != null) qw.close();
-			}catch(Exception e){
-				System.err.println(e.getMessage());
+				double[] errArray = new double[qtimes];
+				double[][] tmpres = new double[dims][2];
+				rqw = new FileWriter("./BLik_Hungarian_RangeQueryError.txt",true); //true == append
+				//rqw.write("#tuples beta size lamda sel error\n");
+				//sel=0.1
+				System.out.println("Vary lambda (sel=0.1): ");
+				for (int l=1; l<dims; l++){
+					rqw.write(inputFile+"\t"+origTuples+"\t"+b_param+"\t"+bucket_size+"\t"+
+							 l+"\t"+selectivities[1]+" \t");
+					for (int qi=0; qi<dims; qi++){ //INITIALIZATION:
+						tmpres[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min SA value.
+						tmpres[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max SA value
+					}
+
+					qErr = rangeQueries(selectivities[1], l, tmpres, qtimes, errArray);
+					rqw.write(qErr+" \n");
+				}
+				rqw.write("\n");
+				
+				System.out.println("Vary selectivity (lambda=3): ");
+				int l=3; //lambda = 3 first QIs.
+				for (int i=0; i<selectivities.length; i++){
+					rqw.write(origTuples+" \t"+b_param+"\t "+bucket_size+"\t "+
+							 l+"\t "+selectivities[i]+"\t ");
+					for (int qi=0; qi<dims; qi++){ //INITIALIZATION:
+						tmpres[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min SA value.
+						tmpres[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max SA value
+					}
+
+					qErr = rangeQueries(selectivities[i], l, tmpres, qtimes, errArray);
+					rqw.write(qErr+" \n");
+				}
+				rqw.write("\n");
+				
+			}catch(IOException ioe){
+				System.err.println("IOException: " + ioe.getMessage());
+			}finally{
+				try{
+					if(rqw != null) rqw.close();
+				}catch(Exception e){
+					System.err.println(e.getMessage());
+				}
+			}
+		}
+		
+		if (pq==true){
+			System.out.println("Prefix Queries.");
+			double qErr = 0;
+			FileWriter qw = null;
+			int qtimes = 1000; //numer of random queries.
+			try{
+				double[] errArrayPref = new double[qtimes];
+				double[][] tmpres = new double[dims][2];
+				qw = new FileWriter("./Hungarian_PrefixQueryError.txt",true); //true == append
+				//qw.write("#tuples beta size error\n");
+				for (int qi=0; qi<dims; qi++){ //INITIALIZATION:
+					tmpres[qi][0] = (double)MinMaxPerAttribute[qi][0]-1;//<min QI value.
+					tmpres[qi][1] = (double)MinMaxPerAttribute[qi][1]+1;//>max QI value
+				}
+				int prefAttr = edu_level; //2
+				qErr = PrefIncQueries(prefAttr, tmpres, qtimes, errArrayPref);
+				qw.write("\n");
+				qw.write(inputFile+"\t"+origTuples+"\t "+b_param+"\t "+bucket_size+"\t "+qErr+" \n");
+				System.out.println("Pref Queries: "+origTuples+" "+b_param+" "+bucket_size+" "+qErr+" \n\n");
+				
+			}catch(IOException ioe){
+				System.err.println("IOException: " + ioe.getMessage());
+			}finally{
+				try{
+					if(qw != null) qw.close();
+				}catch(Exception e){
+					System.err.println(e.getMessage());
+				}
 			}
 		}
 
+		if (nb==true){
+			System.out.println("Naive Bayes Attack.");
+			FileWriter nbw = null;
+			try{
+				nbw = new FileWriter("./BLik_Hungarian_NaiveBayesAttack.txt",true); //true == append
+				//nbw.write("#tuples beta data accuracy_rate Laplace_rate\n");
+				String dtfile = inputFile.substring(inputFile.lastIndexOf('/')+1,
+								inputFile.lastIndexOf('.'));
+				nbw.write(inputFile+"\t"+origTuples+"\t "+b_param+"\t "+dtfile+"\t ");
+				double[] Laplace_rate = new double[1];
+				Laplace_rate[0] = 0.0;
+				double accuracy_rate = naiveBayes(Laplace_rate);
+				nbw.write(accuracy_rate+"\t "+Laplace_rate[0]+"\n");
+				System.out.println("accuracy_rate = "+accuracy_rate+"\n");
+								
+			}catch(IOException ioe){
+				System.err.println("IOException: " + ioe.getMessage());
+			}finally{
+				try{
+					if(nbw != null) nbw.close();
+				}catch(Exception e){
+					System.err.println(e.getMessage());
+				}
+			}
+		}
+		//To save the anonymized data as a csv file, uncomment the saveOutFile() line. 
+		//Not recommended for limited disk space, nor needed for evaluation.
+		//saveOutFile();
 	}
 
 	//for buckets: (no partitioning)
@@ -981,7 +1582,7 @@ public class Hungarian_BLikeness {
 			if(tuple[i]==-1){ //Beta-likeness dummy tuple.
 				return 0;
 			}
-			
+
 			if (i==0 || (i==2)){
 				int[] distinctValues = MinMaxPerDim[i];
 				min = distinctValues[0];
@@ -1063,7 +1664,7 @@ public class Hungarian_BLikeness {
 				return 0;
 			}
 			score+=(double)Math.abs(tuple1[i]-tuple2[i])/(double)(cardinalities[i]-1);
-			
+
 		}
 		return score;
 	}
@@ -1099,7 +1700,7 @@ public class Hungarian_BLikeness {
 		for (int i=0; i<dims-1; i++){
 			int[] distinctValues = MinMaxPerDim[i];
 			score+=(double)(distinctValues[1]-distinctValues[0])/(double)(cardinalities[i]-1);
-			
+
 		}
 		return score;
 	}
@@ -1128,7 +1729,7 @@ public class Hungarian_BLikeness {
 
 		//if (tuple1[SA] == tuple2[SA]) //Beta-likeness does not require this!
 		//	return BIG; //inf
-		
+
 		for (int i=0; i<dims-1; i++){
 			if((tuple1[i]==-1)||(tuple2[i]==-1)){ //Beta-likeness dummy tuple.
 				return 0;
@@ -1143,11 +1744,11 @@ public class Hungarian_BLikeness {
 
 	private static double NCP(short[] tuple, LinkedList<Integer>[] distinctValuesPerDim){
 		double score=0.0;
-		
+
 		LinkedList<Integer> distinctValues2 = distinctValuesPerDim[SA];
 		//if (distinctValues2.contains((int)tuple[SA])) //Beta-likeness does not require this!
 		//	return BIG; //inf
-		
+
 		for (int i=0; i<dims-1; i++){
 			if(tuple[i]==-1){ //Beta-likeness dummy tuple.
 				return 0;
@@ -1167,7 +1768,7 @@ public class Hungarian_BLikeness {
 		}
 		return score;
 	}
-	
+
 	private static double NCP(LinkedList<Integer>[] distinctValuesPerDim){
 		double score=0.0;
 		for (int i=0; i<dims-1; i++){

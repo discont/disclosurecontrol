@@ -19,41 +19,41 @@ public class TopCoderAlgo {
 	int[] prev;             //array for memorizing alternating paths
 	
 	int ret;                      //weight of the optimal matching
-	int max_match;                    //number of vertices in current matching
+    int max_match;                    //number of vertices in current matching
 		
 	void hungarian(double[][] cost, int[] assignment){
 		n = cost.length;
-		//max_match;			//n workers and n jobs
+		//max_match;        //n workers and n jobs
 		lx = new double[n]; 
-		ly = new double[n];		//labels of X and Y parts
-		xy = new int[n];		//xy[x] - vertex that is matched with x,
-		yx = new int[n];		//yx[y] - vertex that is matched with y
+		ly = new double[n];        		//labels of X and Y parts
+		xy = new int[n];               //xy[x] - vertex that is matched with x,
+		yx = new int[n];               //yx[y] - vertex that is matched with y
 		S = new boolean[n];
 		T = new boolean[n];		//sets S and T in algorithm
-		slack = new double[n];          //as in the algorithm description
-		slackx = new int[n];		//slackx[y] such a vertex, that
-						// l(slackx[y]) + l(y) - w(slackx[y],y) = slack[y]
-		prev=new int[n];		//array for memorizing alternating paths
+		slack = new double[n];            //as in the algorithm description
+		slackx = new int[n];           //slackx[y] such a vertex, that
+		                         // l(slackx[y]) + l(y) - w(slackx[y],y) = slack[y]
+		prev=new int[n];             //array for memorizing alternating paths
 		
-		ret = 0;			//weight of the optimal matching
-		max_match = 0;			//number of vertices in current matching
+		ret = 0;                      //weight of the optimal matching
+	    max_match = 0;                    //number of vertices in current matching
 	    
-		Arrays.fill(xy, -1);
-		Arrays.fill(yx, -1);
+	    Arrays.fill(xy, -1);
+	    Arrays.fill(yx, -1);
 	    
-		//init labels 
-		Arrays.fill(lx, 0.0);
-		Arrays.fill(ly, 0.0);
-		for (int x = 0; x < n; x++)
-			for (int y = 0; y < n; y++)
-				lx[x] = Math.max(lx[x], -cost[x][y]);                   //step 0
+	   //init labels 
+	    Arrays.fill(lx, 0.0);
+	    Arrays.fill(ly, 0.0);
+	    for (int x = 0; x < n; x++)
+	        for (int y = 0; y < n; y++)
+	            lx[x] = Math.max(lx[x], -cost[x][y]);                   //step 0
 	   
-		augment(cost); 
-		//steps 1-3
-		for (int x = 0; x < n; x++) 
-			assignment[x]=xy[x];//forming answer there
-			//ret += cost[x][xy[x]];
-		return;
+	    augment(cost); 
+	    //steps 1-3
+	    for (int x = 0; x < n; x++) 
+	    	assignment[x]=xy[x];//forming answer there
+	        //ret += cost[x][xy[x]];
+	    return;
 	}
 	
 	void update_labels()
@@ -85,8 +85,9 @@ public class TopCoderAlgo {
 	        }
 	}
 	
-	void augment(double[][] cost)                         //main function of the algorithm
+	void augment (double[][] cost)                         //main function of the algorithm
 	{
+		try{
 	    if (max_match == n) return;        //check wether matching is already perfect
 	    int x, y, root=-1;  
 	    int[] q = new int[n];//just counters and root vertex
@@ -171,6 +172,11 @@ public class TopCoderAlgo {
 	        }
 	        augment(cost);                                                      //recall function, go to step 1 of the algorithm
 	    }
+		}catch (Exception e){
+			System.err.println("Exception: " + e.getMessage());
+			e.printStackTrace();
+		}
 	}//end of augment() function 
+	
 
 }

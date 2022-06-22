@@ -5,11 +5,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 
-public class CensusParser {
+public class CensusParserL {
 	private DataInputStream dis;
 	int dims;
+	private int SA;
 	
-	public CensusParser(String tuplesFile ) {
+	public CensusParserL(String tuplesFile ) {
 		//this.dims = dims;
 		try {
 			dis = new DataInputStream(new BufferedInputStream(new FileInputStream(tuplesFile)));
@@ -17,8 +18,9 @@ public class CensusParser {
 			e.printStackTrace();
 		}
 	}
-	public CensusParser(String tuplesFile, int dims ) {
+	public CensusParserL(String tuplesFile, int dims, int SA ) {
 		this.dims = dims;
+		this.SA = SA;
 		try {
 			dis = new DataInputStream(new BufferedInputStream(new FileInputStream(tuplesFile)));
 		} catch (FileNotFoundException e) {
@@ -41,10 +43,10 @@ public class CensusParser {
 		short[] tuple =  new short[dims];
 		String line = dis.readLine();
 		String[] splitLine = line.split(", ");
-		for (int i=0; i<dims;i++){
-			tuple[i]=(short) Integer.parseInt(splitLine[i].trim());
+		for (int i=0; i<dims-1;i++){
+			tuple[i]=(short) Integer.parseInt(splitLine[i]);
 		}
-		
+		tuple[dims-1]=(short) Integer.parseInt(splitLine[SA]);// SA is always the dims-1 attribute
 		return tuple;
 	}
 }

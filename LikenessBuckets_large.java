@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.io.IOException;
 import java.io.FileWriter;
 
-public class LikenessBuckets {
+public class LikenessBuckets_large {
 	double b_param;
 	int tuples;
 	int dims;
@@ -24,7 +24,7 @@ public class LikenessBuckets {
 	String inFile;
 	
 
-	public LikenessBuckets(double b_param, int tuples, int dims, short[][] map,
+	public LikenessBuckets_large(double b_param, int tuples, int dims, short[][] map,
 				   short[][][] buckets, double th, String inputFile) {
 		this.b_param = (double)b_param;
 		this.tuples = tuples;
@@ -34,7 +34,7 @@ public class LikenessBuckets {
 		//bucketSize = 1;
 		//buckNum=tuples;
 		this.threshold = th;
-		this.inFile = inputFile;//.substring(inputFile.lastIndexOf('/')+1,inputFile.lastIndexOf('.'));
+		this.inFile = inputFile;//.substring(inputFile.lastIndexOf('/')+1, inputFile.lastIndexOf('.'));
 	}
 
 	public double getB() {
@@ -342,7 +342,7 @@ public class LikenessBuckets {
 		//Else: b_param != 0 :
 
 		// maximim c is maxFreq:
-		int maxC = maxFreq; //It is <=n.
+		int maxC = tuples; // maxFreq; //It is <=n. <<=========== NOTE: I CHANGED 'maxFreq' TO 'tuples' (WICH IS 'n', i.e., the DB size). This is only to check what happens for VERY LARGE BETA values!!!! 08/july/2019
 		// minimun c is GCD:
 		int minC = gcd_all(); //It is >=1.
 		bucketSize = minC;
