@@ -12,6 +12,7 @@ public class Greedy_BLikeness {
 	//private static final boolean OPTIMIZATION = true;
 	private static double maxCost = BIG;//0.5436267458828434;
 	static byte[] cardinalities = {79, 2, 17, 6, 9, 10, 83, 51}; //age, gender, edu_level, marital, race, work_class, country, occupation
+	static boolean[] categorical = {false, true, false, true, true, true, true, true}; 
 	//static byte[] cardinalities ={10,6,6,10,41};//Coil2000
 	static int age = 0;
 	static int gender = 1;
@@ -420,7 +421,7 @@ public class Greedy_BLikeness {
 			*/
 			for (int ii=0; ii<lambda; ii++){
 				int i = (int)choices.get(ii);
-				if (i==0 || i==2){ //Continuous:
+				if (!categorical[i]){ //if (i==0 || i==2){ //Continuous:
 					range = (double)(MinMaxPerAttribute[i][1] - MinMaxPerAttribute[i][0]) * sele;
 					min = (double)MinMaxPerAttribute[i][0];//min attribute value.
 					max = (double)MinMaxPerAttribute[i][1] - range;//max attribute value - range.
@@ -468,7 +469,7 @@ public class Greedy_BLikeness {
 						genRange = false;
 						//break;
 					}else{ //there is some overlap:
-						if (i==0 || i==2){ //Continuous:
+						if (!categorical[i]){ //if (i==0 || i==2){ //Continuous:
 							if ((genMn<=rs[i][0])&&(rs[i][1]<=genMx)){
 								overlap = (rs[i][1] - rs[i][0])/(genMx - genMn);
 							}else if ((genMn<=rs[i][0])&&(genMx<=rs[i][1])){
@@ -825,7 +826,7 @@ public class Greedy_BLikeness {
 					//Generalization Range:
 					////if (final_assignment[j][bi] < origTuples) //not a dummy:
 					short temp = indexToTupleMapping(final_assignment[j][bi])[i];
-					/*if (i==0 || i==2){ //continuous ranges
+					/*if (!categorical[i]){ //if (i==0 || i==2){ //continuous ranges
 					 //NEEDED!!!
 						if (genMx < temp)
 							genMx = temp;
@@ -847,7 +848,7 @@ public class Greedy_BLikeness {
 						}
 					//}*/
 				}
-				/*/if (i==0 || i==2){ //continuous ranges
+				/*if (!categorical[i]){ //if (i==0 || i==2){ //continuous ranges
 				 //NEEDED!!!
 					for(qi_value=genMn; qi_value<genMx; qi_value++){ //==
 						if (!QI_map.containsKey(sa_value+"_"+i)){
@@ -1021,7 +1022,7 @@ public class Greedy_BLikeness {
 
 			for (int j=0; j<final_assignment.length; j++){ 
 				for (int i=0; i<dims; i++){
-					if (i==0 || i==2){ //Continuous:
+					if (!categorical[i]){ //if (i==0 || i==2){ //Continuous:
 						genMx = indexToTupleMapping(final_assignment[j][0])[i];
 						genMn = indexToTupleMapping(final_assignment[j][0])[i];				
 						for (int bi=0; bi<buckNum; bi++){
@@ -1529,7 +1530,7 @@ public class Greedy_BLikeness {
 			final_assignment[offset+first+i][0]= offset+first+i;
 			if (MIXED){
 				for (int l=0; l<dims; l++){
-					if (l==0||l==2){
+					if (!categorical[l]){ //if (l==0||l==2){
 						MinMaxPerAssign[i][l][0]=in1[first+i][l];
 						MinMaxPerAssign[i][l][1]=in1[first+i][l];
 					}else{
@@ -1598,7 +1599,7 @@ public class Greedy_BLikeness {
 			if((tuple1[i]==-1)||(tuple2[i]==-1)){ //Beta-likeness dummy tuple.
 				return 0;
 			}
-			if (i==0 || i==2){
+			if (!categorical[i]){ //if (i==0 || i==2){
 				score+=(double)Math.abs(tuple1[i]-tuple2[i])/(double)(cardinalities[i]-1);
 			}else{
 				if (tuple1[i]==tuple2[i])
@@ -1624,7 +1625,7 @@ public class Greedy_BLikeness {
 				return 0;
 			}
 
-			if (i==0 || i==2){
+			if (!categorical[i]){ //if (i==0 || i==2){
 				int[] distinctValues = MinMaxPerDim[i];
 				min = distinctValues[0];
 				max = distinctValues[1];
@@ -1655,7 +1656,7 @@ public class Greedy_BLikeness {
 		double score=0.0;
 
 		for (int i=0; i<dims-1; i++){
-			if (i==0 || i==2){
+			if (!categorical[i]){ //if (i==0 || i==2){
 				int[] distinctValues = MinMaxPerDim[i];
 				score+=(double)(distinctValues[1]-distinctValues[0])/(double)(cardinalities[i]-1);
 			}else{
@@ -1673,7 +1674,7 @@ public class Greedy_BLikeness {
 			return; //dummy tuple
 		}
 		for (int i=0; i<dims; i++){ //we need SA, too!
-			if (i==0 || i==2){
+			if (!categorical[i]){ //if (i==0 || i==2){
 				int[] distinctValues = MinMaxPerDim[i];
 				if ((newTuple[i] < distinctValues[0])||(distinctValues[0]==-1)){
 					distinctValues[0]=(int) newTuple[i];
