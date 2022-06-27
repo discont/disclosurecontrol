@@ -1,0 +1,8 @@
+*
+./Hierarchy/Sex.txt
+*
+./Hierarchy/MarSt.txt
+./Hierarchy/Race.txt
+./Hierarchy/ClassWrk.txt
+./Hierarchy/BPL.txt
+*

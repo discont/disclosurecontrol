@@ -1,0 +1,9 @@
+t //age
+t //sex
+t //edu
+t //marital status
+t //race
+t //workclass
+t //country
+t //salary
+t
