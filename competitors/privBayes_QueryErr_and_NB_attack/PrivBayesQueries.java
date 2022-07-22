@@ -582,6 +582,7 @@ public class PrivBayesQueries {
 			}
 
 			System.out.println("Prefix Queries.");
+			wq.write("Prefix Queries.\n");
 			int prefAttr = edu_level; //2
 			qErr = PrefIncQueries(prefAttr, tmpres, qtimes, errArrayPref, qres);
 			qw.write(origTuples+" "+b_param+" "+bucket_size+" ");
@@ -597,6 +598,7 @@ public class PrivBayesQueries {
 			
 			System.out.println("Range Queries.");
 			System.out.println("Vary lambda (sel=0.1): ");
+			wq.write("Range Queries.\n");
 			for (int l=1; l<dims; l++){
 				qw.write(origTuples+" "+ anonFile+" "+
 						 l+" "+selectivities[1]+" ");
