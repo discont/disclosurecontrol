@@ -585,7 +585,7 @@ public class PrivBayesQueries {
 			wq.write("Prefix Queries.\n");
 			int prefAttr = edu_level; //2
 			qErr = PrefIncQueries(prefAttr, tmpres, qtimes, errArrayPref, qres);
-			qw.write(origTuples+" "+b_param+" "+bucket_size+" ");
+			qw.write(origTuples+" "+anonFile+" "+bucket_size+" ");
 			qw.write(qErr+" "+ qres.meanE+" "+ qres.minE+" "+ qres.maxE+" \n");
 			System.out.println("Pref Queries: "+origTuples+" "+b_param+" "+bucket_size+" "+qErr+" \n\n");
 			
