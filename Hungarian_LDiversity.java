@@ -704,14 +704,14 @@ public class Hungarian_LDiversity {
 		try{
 			fw = new FileWriter("./LDiv_Hungarian.txt",true); //true == append
 			//fw.write("inputFile\t tuples \t dims \t ell \t threshold \t partition \t time \t GCP\n");
-			fw.write(inputFile+" \t "+tuples+" \t "+dims+" \t "+l_param+" \t "+threshold+" \t ");
-			fw.write(preprocessingTime+(mTime-parallelStartTime)/chunk_sizes.size() + (endTime - mTime)+" \t "+
-					+((double)(distortion/((dims-1)*tuples)))+"\n");
+			fw.write(inputFile+" "+tuples+" "+dims+" "+l_param+" "+threshold+" ");
 			if((partition_function == 0) || (partition_function == 1)){
-				fw.write(partition_size+" \t ");
+				fw.write(partition_size+" ");
 			}else{
 				fw.write(bucket_size+" ");
 			}
+			fw.write(preprocessingTime+(mTime-parallelStartTime)/chunk_sizes.size() + (endTime - mTime)+" "+
+					+((double)(distortion/((dims-1)*tuples)))+"\n");
 		}catch(IOException ioe){
 			System.err.println("IOException: " + ioe.getMessage());
 		}finally{
