@@ -587,7 +587,7 @@ public class PrivBayesQueries {
 			qw.write(origTuples+" "+b_param+" "+bucket_size+" ");
 			qw.write(qErr+" "+ qres.meanE+" "+ qres.minE+" "+ qres.maxE+" \n");
 			System.out.println("Pref Queries: "+origTuples+" "+b_param+" "+bucket_size+" "+qErr+" \n\n");
-/*			
+			
 			System.out.println("Range Queries.");			
 			//sel=0.1
 			for (int qi=0; qi<dims; qi++){ //INITIALIZATION:
@@ -621,7 +621,7 @@ public class PrivBayesQueries {
 				qw.write(qErr+" "+ qres.meanE+" "+ qres.minE+" "+ qres.maxE+" \n");
 			}
 			qw.write("\n");
-*/
+
 		}catch(IOException ioe){
 			System.err.println("IOException: " + ioe.getMessage());
 		}finally{
